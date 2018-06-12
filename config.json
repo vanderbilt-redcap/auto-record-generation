@@ -1,0 +1,59 @@
+{
+  "name": "Auto Record Generation",
+
+  "namespace": "Vanderbilt\\AutoRecordGenerationExternalModule",
+
+  "authors": [
+    {
+      "name": "Ryan Moore",
+      "email": "datacore@vanderbilt.edu",
+      "institution": "Vanderbilt University Medical Center"
+    }
+  ],
+
+  "description": "Module that allows for a new record to be generated in another project (or the same project) on a flagging field being saved. Allows for data fields to be transferred to the new record as well.",
+
+  "permissions": [
+    "redcap_save_record"
+  ],
+
+  "links": {
+    "project": [
+    ]
+  },
+
+  "no-auth-pages":[""],
+
+  "project-settings": [
+    {
+      "key": "destination_project",
+      "name": "Project in Which to Generate New Record",
+      "type": "project-id"
+    },
+    {
+      "key": "field_flag",
+      "name": "Field to Trigger Record Generation",
+      "type": "field-list"
+    },
+    {
+      "key": "new_record",
+      "name": "Name for New Record (Accepts standard REDCap piping. Leave blank to use next auto ID)",
+      "type": "text"
+    },
+    {
+      "key": "pipe_fields",
+      "name": "Data Field to Pipe to New Record (Field names must match, leave blank to transfer every data field)",
+      "type": "field-list",
+      "repeatable": true
+    }
+  ],
+
+  "system-settings": [
+  ],
+  "compatibility": {
+    "php-version-min": "5.5.0",
+    "php-version-max": "",
+    "redcap-version-min": "8.0.0",
+    "redcap-version-max": ""
+  }
+}
