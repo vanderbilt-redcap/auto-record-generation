@@ -36,7 +36,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 					$dataToPipe[$targetField] = $recordData[$record][$event_id][$targetField];
 				}
 			}
-			//TODO In case of not explicitly defined new record name, need to implement way to automatically generate a new record ID
+
 			if ($newRecordName != "") {
 				$dataToPipe[$targetProject->table_pk] = $newRecordName;
 			}
