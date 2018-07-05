@@ -16,7 +16,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
 		$triggerField = $_POST[$this->getProjectSetting('field_flag')];
 		$targetProjectID = $this->getProjectSetting('destination_project');
-		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID)) {
+		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && $this->firstTimeSave($project_id,$record,$event_id,$this->getProjectSetting('field_flag'),$repeat_instance) !== false) {
 			$targetProject = new \Project($targetProjectID);
 			$sourceProject = new \Project($project_id);
 			$recordData = \Records::getData($project_id,'array',array($record));
@@ -169,5 +169,34 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		}
 		// Return new auto id value
 		return $newParticipantId;
+	}
+
+	function firstTimeSave($project_id,$record_id,$event_id,$fieldName,$instance = "1") {
+		$instance = (is_numeric($instance) ? (int)$instance : 1);
+		$instanceSql = "";
+		if ($instance > 1) {
+			$instanceSql = "AND data_values LIKE '%[instance = $instance]%'";
+		}
+		$sql = "SELECT ts, data_values
+			FROM redcap_log_event
+			WHERE (description = 'Create record' OR description = 'Update record')
+				AND object_type='redcap_data'
+				AND pk='$record_id'
+				AND event_id='$event_id'
+				AND project_id='$project_id'
+				AND (data_values LIKE '%$fieldName = %' OR data_values IS NULL)
+				ORDER BY ts ASC";
+		//echo "$sql<br/>";
+		$result = db_query($sql);
+		$lastts = "";
+		while ($row = db_fetch_assoc($result)) {
+			if ($lastts != "") {
+				return false;
+			}
+			elseif (strpos($row['data_values'],"$fieldName =") !== 0) {
+				$lastts = $row['ts'];
+			}
+		}
+		return true;
 	}
 }
