@@ -41,6 +41,16 @@
       "type": "text"
     },
     {
+      "key": "overwrite-record",
+      "name": "Overwrite data in destination project record every time data is saved in this project.",
+      "type":"radio",
+      "choices": [
+        {"value":"overwrite", "name":"Yes"},
+        {"value":"0","name":"No"}
+      ],
+      "repeatable": false
+    },
+    {
       "key": "pipe_fields",
       "name": "Data Field to Pipe to New Record (Field names must match, leave blank to transfer every data field)",
       "type": "field-list",

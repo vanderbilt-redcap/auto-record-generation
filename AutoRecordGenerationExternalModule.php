@@ -27,6 +27,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			//$targetFields = \MetaData::getFieldNames($targetProjectID);
 			$targetFields = $this->getProjectFields($targetProjectID);
 			$sourceFields = $this->getSourceFields($fieldData,$this->getProjectSetting('pipe_fields'));
+			$overwrite = ($this->getProjectSetting('overwrite-record') == "overwrite" ? $this->getProjectSetting('overwrite-record') : "normal");
 			//$recordData = \Records::getData($project_id,'array',array($record),$targetFields);
 
 			$dataToPipe = array();
@@ -45,7 +46,8 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				$dataToPipe[$targetProject->table_pk] = $autoRecordID;
 			}
 
-			$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
+			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
+            \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
 		}
 	}
 
@@ -172,6 +174,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	}
 
 	function firstTimeSave($project_id,$record_id,$event_id,$fieldName,$instance = "1") {
+	    if ($this->getProjectSetting('overwrite-record') == "overwrite") return true;
 		$instance = (is_numeric($instance) ? (int)$instance : 1);
 		$instanceSql = "";
 		if ($instance > 1) {
