@@ -80,7 +80,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			WHERE project_id=$projectID
 			ORDER BY field_order";
 		//echo "$sql<br/>";
-		$result = db_query($sql);
+		$result = $this->query($sql);
 		while ($row = db_fetch_assoc($result)) {
 			$fieldArray[] = $row['field_name'];
 		}
@@ -115,14 +115,14 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			ORDER BY abs(record) DESC
 			LIMIT 1";
 
-		$newParticipantId = db_result(db_query($sql),0);
+		$newParticipantId = db_result($this->query($sql),0);
 		if ($newParticipantId == "") $newParticipantId = 0;
 		$newParticipantId++;
 
 		$sql = "INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES
 			({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
 
-		db_query($sql);
+		$this->query($sql);
 		@db_query("COMMIT");
 		$logSql = $sql;
 
@@ -132,7 +132,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			WHERE d.project_id = {$projectId}
 				AND d.record = '$newParticipantId'";
 
-		$result = db_query($sql);
+		$result = $this->query($sql);
 
 		while(db_num_rows($result) > 1) {
 			# Delete, increment by a random integer and attempt to re-create the record
@@ -142,7 +142,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 					AND d.field_name = 'record_id'
 				LIMIT 1";
 
-			db_query($sql);
+			$this->query($sql);
 
 			$newParticipantId += rand(1,10);
 
@@ -152,7 +152,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
 			$logSql = $sql;
 
-			db_query($sql);
+			$this->query($sql);
 			@db_query("COMMIT");
 
 			$sql = "SELECT d.field_name
@@ -160,7 +160,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				WHERE d.project_id = {$projectId}
 					AND d.record = '$newParticipantId'";
 
-			$result = db_query($sql);
+			$result = $this->query($sql);
 		}
 
 		\Logging::logEvent($logSql, $projectId, "INSERT", "redcap_data", $newParticipantId,"record_id='$newParticipantId'","Create Record");
@@ -190,7 +190,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				AND (data_values LIKE '%$fieldName = %' OR data_values IS NULL)
 				ORDER BY ts ASC";
 		//echo "$sql<br/>";
-		$result = db_query($sql);
+		$result = $this->query($sql);
 		$lastts = "";
 		while ($row = db_fetch_assoc($result)) {
 			if ($lastts != "") {
