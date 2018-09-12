@@ -188,16 +188,12 @@ exit;
 				AND pk='$record_id'
 				AND event_id='$event_id'
 				AND project_id='$project_id'
-				AND (data_values LIKE '%$fieldName = %' OR data_values IS NULL)
+				AND (data_values LIKE '%$fieldName = %')
 				ORDER BY ts ASC";
-		echo "$sql<br/>";
-		exit;
+		/*echo "$sql<br/>";*/
 		$result = $this->query($sql);
 		$lastts = "";
 		while ($row = db_fetch_assoc($result)) {
-		    echo "<pre>";
-		    print_r($row);
-		    echo "</pre>";
 			if ($lastts != "") {
 				return false;
 			}
@@ -205,7 +201,6 @@ exit;
 				$lastts = $row['ts'];
 			}
 		}
-		exit;
 		return true;
 	}
 }
