@@ -191,6 +191,7 @@ exit;
 				AND (data_values LIKE '%$fieldName = %' OR data_values IS NULL)
 				ORDER BY ts ASC";
 		echo "$sql<br/>";
+		exit;
 		$result = $this->query($sql);
 		$lastts = "";
 		while ($row = db_fetch_assoc($result)) {
