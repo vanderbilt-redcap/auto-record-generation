@@ -16,8 +16,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
 		$triggerField = $_POST[$this->getProjectSetting('field_flag')];
 		$targetProjectID = $this->getProjectSetting('destination_project');
-		echo $triggerField.", ".$targetProjectID."<br/>";
-		exit;
 		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && $this->firstTimeSave($project_id,$record,$event_id,$this->getProjectSetting('field_flag'),$repeat_instance) !== false) {
 			$targetProject = new \Project($targetProjectID);
 			$sourceProject = new \Project($project_id);
@@ -176,7 +174,11 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	}
 
 	function firstTimeSave($project_id,$record_id,$event_id,$fieldName,$instance = "1") {
-	    if ($this->getProjectSetting('overwrite-record') == "overwrite") return true;
+	    if ($this->getProjectSetting('overwrite-record') == "overwrite") {
+	        echo "This was overwrite<br/>";
+	        exit;
+	        return true;
+        }
 		$instance = (is_numeric($instance) ? (int)$instance : 1);
 		$instanceSql = "";
 		if ($instance > 1) {
