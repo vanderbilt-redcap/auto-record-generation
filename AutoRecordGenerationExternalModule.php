@@ -193,6 +193,9 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		$result = $this->query($sql);
 		$lastts = "";
 		while ($row = db_fetch_assoc($result)) {
+		    echo "<pre>";
+		    print_r($row);
+		    echo "</pre>";
 			if ($lastts != "") {
 				return false;
 			}
@@ -200,6 +203,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				$lastts = $row['ts'];
 			}
 		}
+		exit;
 		return true;
 	}
 }
