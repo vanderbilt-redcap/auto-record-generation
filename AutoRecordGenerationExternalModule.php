@@ -189,8 +189,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				AND project_id='$project_id'
 				AND (data_values LIKE '%$fieldName = %')
 				ORDER BY ts ASC";
-		echo "$sql<br/>";
-		exit;
 		$result = $this->query($sql);
 		$lastts = "";
 		while ($row = db_fetch_assoc($result)) {
