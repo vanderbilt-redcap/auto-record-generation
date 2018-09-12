@@ -20,8 +20,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			$targetProject = new \Project($targetProjectID);
 			$sourceProject = new \Project($project_id);
 			$recordData = \Records::getData($project_id,'array',array($record));
-echo "I got here<br/>";
-exit;
+
 			$newRecordName = $this->parseRecordSetting($this->getProjectSetting("new_record"),$recordData[$record][$event_id]);
 			//$fieldData = \MetaData::getFieldNames($project_id);
 			$fieldData = $this->getProjectFields($project_id);
