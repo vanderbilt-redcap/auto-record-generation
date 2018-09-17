@@ -16,7 +16,16 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
 		$triggerField = $_POST[$this->getProjectSetting('field_flag')];
 		$targetProjectID = $this->getProjectSetting('destination_project');
-		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && $this->firstTimeSave($project_id,$record,$event_id,$this->getProjectSetting('field_flag'),$repeat_instance) !== false) {
+        $overwrite = ($this->getProjectSetting('overwrite-record') == "overwrite" ? $this->getProjectSetting('overwrite-record') : "normal");
+        $queryLogs = $this->queryLogs("SELECT message, destination_record_id WHERE message='Auto record for $record'");
+        $destinationRecordID = "";
+        while ($row = db_fetch_assoc($queryLogs)) {
+            if ($row['destination_record_id'] != "") {
+                $destinationRecordID = $row['destination_record_id'];
+            }
+        }
+
+		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite")) {
 			$targetProject = new \Project($targetProjectID);
 			$sourceProject = new \Project($project_id);
 			$recordData = \Records::getData($project_id,'array',array($record));
@@ -27,7 +36,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			//$targetFields = \MetaData::getFieldNames($targetProjectID);
 			$targetFields = $this->getProjectFields($targetProjectID);
 			$sourceFields = $this->getSourceFields($fieldData,$this->getProjectSetting('pipe_fields'));
-			$overwrite = ($this->getProjectSetting('overwrite-record') == "overwrite" ? $this->getProjectSetting('overwrite-record') : "normal");
 			//$recordData = \Records::getData($project_id,'array',array($record),$targetFields);
 
 			$dataToPipe = array();
@@ -42,12 +50,20 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				$dataToPipe[$targetProject->table_pk] = $newRecordName;
 			}
 			else {
-				$autoRecordID = $this->getAutoID($project_id,$event_id);
-				$dataToPipe[$targetProject->table_pk] = $autoRecordID;
+			    if ($destinationRecordID != "") {
+                    $dataToPipe[$targetProject->table_pk] = $destinationRecordID;
+                }
+                else {
+                    $autoRecordID = $this->getAutoID($project_id, $event_id);
+                    $dataToPipe[$targetProject->table_pk] = $autoRecordID;
+                }
 			}
 
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
             \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
+			if ($destinationRecordID == "") {
+                $this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
+            }
 		}
 	}
 
@@ -57,7 +73,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		$stringsToReplace = $matchRegEx[0];
 		$fieldNamesReplace = $matchRegEx[1];
 		foreach ($fieldNamesReplace as $index => $fieldName) {
-			$returnString = str_replace($stringsToReplace[$index],$recorddata[$fieldName],$returnString);
+			$returnString = db_real_escape_string(str_replace($stringsToReplace[$index],$recorddata[$fieldName],$returnString));
 		}
 		return $returnString;
 	}
@@ -171,34 +187,5 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		}
 		// Return new auto id value
 		return $newParticipantId;
-	}
-
-	function firstTimeSave($project_id,$record_id,$event_id,$fieldName,$instance = "1") {
-	    if ($this->getProjectSetting('overwrite-record') == "overwrite") return true;
-		$instance = (is_numeric($instance) ? (int)$instance : 1);
-		$instanceSql = "";
-		if ($instance > 1) {
-			$instanceSql = "AND data_values LIKE '%[instance = $instance]%'";
-		}
-		$sql = "SELECT ts, data_values
-			FROM redcap_log_event
-			WHERE (description = 'Create record' OR description = 'Update record')
-				AND object_type='redcap_data'
-				AND pk='$record_id'
-				AND event_id='$event_id'
-				AND project_id='$project_id'
-				AND (data_values LIKE '%$fieldName = %')
-				ORDER BY ts ASC";
-		$result = $this->query($sql);
-		$lastts = "";
-		while ($row = db_fetch_assoc($result)) {
-			if ($lastts != "") {
-				return false;
-			}
-			elseif (strpos($row['data_values'],"$fieldName =") !== 0) {
-				$lastts = $row['ts'];
-			}
-		}
-		return true;
 	}
 }
