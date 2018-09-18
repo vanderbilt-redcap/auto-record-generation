@@ -61,9 +61,9 @@
   "system-settings": [
   ],
   "compatibility": {
-    "php-version-min": "5.5.0",
+    "php-version-min": "",
     "php-version-max": "",
-    "redcap-version-min": "8.0.0",
+    "redcap-version-min": "8.7.1",
     "redcap-version-max": ""
   }
 }
