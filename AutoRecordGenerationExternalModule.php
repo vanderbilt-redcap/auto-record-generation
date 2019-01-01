@@ -54,7 +54,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                     $dataToPipe[$targetProject->table_pk] = $destinationRecordID;
                 }
                 else {
-                    $autoRecordID = $this->getAutoID($project_id, $event_id);
+                    $autoRecordID = $this->getAutoID($targetProjectID, $event_id);
                     $dataToPipe[$targetProject->table_pk] = $autoRecordID;
                 }
 			}
