@@ -18,6 +18,9 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		$targetProjectID = $this->getProjectSetting('destination_project');
         $overwrite = ($this->getProjectSetting('overwrite-record') == "overwrite" ? $this->getProjectSetting('overwrite-record') : "normal");
         $queryLogs = $this->queryLogs("SELECT message, destination_record_id WHERE message='Auto record for $record'");
+        $targetProject = new \Project($targetProjectID);
+        $sourceProject = new \Project($project_id);
+
         $destinationRecordID = "";
         while ($row = db_fetch_assoc($queryLogs)) {
             if ($row['destination_record_id'] != "") {
@@ -25,9 +28,17 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
         }
 
-		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite")) {
-			$targetProject = new \Project($targetProjectID);
-			$sourceProject = new \Project($project_id);
+        $destRecordExists = false;
+        if ($destinationRecordID != "") {
+            $targetRecordSql = $this->queryLogs("SELECT record WHERE project_id='$targetProjectID' && record='$destinationRecordID' LIMIT 1");
+            while ($row = db_fetch_assoc($targetRecordSql)) {
+                if ($row['record'] == $destinationRecordID) {
+                    $destRecordExists = true;
+                }
+            }
+        }
+
+		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
 			$recordData = \Records::getData($project_id,'array',array($record));
 
 			$newRecordName = $this->parseRecordSetting($this->getProjectSetting("new_record"),$recordData[$record][$event_id]);
