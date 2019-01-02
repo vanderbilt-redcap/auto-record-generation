@@ -28,20 +28,23 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
         }
 
+        $recordData = \Records::getData($project_id,'array',array($record));
+
+        $newRecordName = $this->parseRecordSetting($this->getProjectSetting("new_record"),$recordData[$record][$event_id]);
+
         $destRecordExists = false;
-        if ($destinationRecordID != "") {
-            $targetRecordSql = $this->queryLogs("SELECT record WHERE project_id='$targetProjectID' && record='$destinationRecordID' LIMIT 1");
-            while ($row = db_fetch_assoc($targetRecordSql)) {
-                if ($row['record'] == $destinationRecordID) {
+        $recordToCheck = ($newRecordName != "" ? $newRecordName : $destinationRecordID);
+        if ($recordToCheck != "") {
+            $targetRecordSql = "SELECT record FROM redcap_data WHERE project_id='$targetProjectID' && record='$recordToCheck' LIMIT 1";
+            $result = db_query($targetRecordSql);
+            while ($row = db_fetch_assoc($result)) {
+                if ($row['record'] == $recordToCheck) {
                     $destRecordExists = true;
                 }
             }
         }
 
 		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
-			$recordData = \Records::getData($project_id,'array',array($record));
-
-			$newRecordName = $this->parseRecordSetting($this->getProjectSetting("new_record"),$recordData[$record][$event_id]);
 			//$fieldData = \MetaData::getFieldNames($project_id);
 			$fieldData = $this->getProjectFields($project_id);
 			//$targetFields = \MetaData::getFieldNames($targetProjectID);
