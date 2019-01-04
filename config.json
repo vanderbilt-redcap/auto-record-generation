@@ -42,18 +42,13 @@
     },
     {
       "key": "overwrite-record",
-      "name": "Overwrite data in destination project record every time data is saved in this project",
+      "name": "Overwrite data in destination project record every time data is saved in this project.",
       "type":"radio",
       "choices": [
         {"value":"overwrite", "name":"Yes"},
         {"value":"0","name":"No"}
       ],
       "repeatable": false
-    },
-    {
-      "key": "trigger_save_hook",
-      "name": "Trigger the <b>redcap_save_record</b> hook on the destination project",
-      "type": "checkbox"
     },
     {
       "key": "pipe_fields",
