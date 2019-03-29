@@ -3,6 +3,8 @@
 
   "namespace": "Vanderbilt\\AutoRecordGenerationExternalModule",
 
+  "framework-version": 2,
+
   "authors": [
     {
       "name": "Ryan Moore",
@@ -14,6 +16,8 @@
   "description": "Module that allows for a new record to be generated in another project (or the same project) on a flagging field being saved. Allows for data fields to be transferred to the new record as well.",
 
   "permissions": [
+    "redcap_module_system_enable",
+    "redcap_module_system_change_version",
     "redcap_save_record"
   ],
 
@@ -26,35 +30,43 @@
 
   "project-settings": [
     {
-      "key": "destination_project",
-      "name": "Project in Which to Generate New Record",
-      "type": "project-id"
-    },
-    {
-      "key": "field_flag",
-      "name": "Field to Trigger Record Generation",
-      "type": "field-list"
-    },
-    {
-      "key": "new_record",
-      "name": "Name for New Record (Accepts standard REDCap piping. Leave blank to use next auto ID)",
-      "type": "text"
-    },
-    {
-      "key": "overwrite-record",
-      "name": "Overwrite data in destination project record every time data is saved in this project.",
-      "type":"radio",
-      "choices": [
-        {"value":"overwrite", "name":"Yes"},
-        {"value":"0","name":"No"}
-      ],
-      "repeatable": false
-    },
-    {
-      "key": "pipe_fields",
-      "name": "Data Field to Pipe to New Record (Field names must match, leave blank to transfer every data field)",
-      "type": "field-list",
-      "repeatable": true
+      "key": "destination_projects",
+      "name": "Destination Project",
+      "repeatable": true,
+      "type": "sub_settings",
+      "sub_settings": [
+        {
+          "key": "destination_project",
+          "name": "Project in Which to Generate New Record",
+          "type": "project-id"
+        },
+        {
+          "key": "field_flag",
+          "name": "Field to Trigger Record Generation",
+          "type": "field-list"
+        },
+        {
+          "key": "new_record",
+          "name": "Name for New Record (Accepts standard REDCap piping. Leave blank to use next auto ID)",
+          "type": "text"
+        },
+        {
+          "key": "overwrite-record",
+          "name": "Overwrite data in destination project record every time data is saved in this project.",
+          "type":"radio",
+          "choices": [
+            {"value":"overwrite", "name":"Yes"},
+            {"value":"0","name":"No"}
+          ],
+          "repeatable": false
+        },
+        {
+          "key": "pipe_fields",
+          "name": "Data Field to Pipe to New Record (Field names must match, leave blank to transfer every data field)",
+          "type": "field-list",
+          "repeatable": true
+        }
+      ]
     }
   ],
 

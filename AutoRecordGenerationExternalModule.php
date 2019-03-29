@@ -14,9 +14,16 @@ use ExternalModules\ExternalModules;
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
-		$triggerField = $_POST[$this->getProjectSetting('field_flag')];
-		$targetProjectID = $this->getProjectSetting('destination_project');
-        $overwrite = ($this->getProjectSetting('overwrite-record') == "overwrite" ? $this->getProjectSetting('overwrite-record') : "normal");
+		$destinationProjects = $this->framework->getSubSettings('destination_projects');
+		foreach ($destinationProjects as $destinationProject) {
+			$this->handleDestinationProject($project_id, $record, $event_id, $destinationProject);
+		}
+	}
+
+	private function handleDestinationProject($project_id, $record, $event_id, $destinationProject) {
+        $triggerField = $_POST[$destinationProject['field_flag']];
+        $targetProjectID = $destinationProject['destination_project'];
+        $overwrite = ($destinationProject['overwrite-record'] == "overwrite" ? $destinationProject['overwrite-record'] : "normal");
         $queryLogs = $this->queryLogs("SELECT message, destination_record_id WHERE message='Auto record for $record'");
         $targetProject = new \Project($targetProjectID);
         $sourceProject = new \Project($project_id);
@@ -30,7 +37,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
         $recordData = \Records::getData($project_id,'array',array($record));
 
-        $newRecordName = $this->parseRecordSetting($this->getProjectSetting("new_record"),$recordData[$record][$event_id]);
+        $newRecordName = $this->parseRecordSetting($destinationProject["new_record"],$recordData[$record][$event_id]);
 
         $destRecordExists = false;
         $recordToCheck = ($newRecordName != "" ? $newRecordName : $destinationRecordID);
@@ -49,7 +56,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			$fieldData = $this->getProjectFields($project_id);
 			//$targetFields = \MetaData::getFieldNames($targetProjectID);
 			$targetFields = $this->getProjectFields($targetProjectID);
-			$sourceFields = $this->getSourceFields($fieldData,$this->getProjectSetting('pipe_fields'));
+			$sourceFields = $this->getSourceFields($fieldData,$destinationProject['pipe_fields']);
 			//$recordData = \Records::getData($project_id,'array',array($record),$targetFields);
 
 			$dataToPipe = array();
@@ -201,5 +208,47 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		}
 		// Return new auto id value
 		return $newParticipantId;
+	}
+
+	function redcap_module_system_enable($version) {
+		// A version of this module with the older settings format could have previously been enabled.
+		// Make sure any old settings are updated.
+		self::ensureProperSubSettingsFormat();
+	}
+
+	function redcap_module_system_change_version($version, $old_version) {
+		// This could be a transition from a version of this module with the older settings format.
+		// Make sure any old settings are updated.
+		self::ensureProperSubSettingsFormat();
+	}
+
+	// This function is required to update existing settings after 'pipe_fields' was wrapped in the 'destination_projects' sub settings group.
+	// This should have no effect on subsequent runs and should be safe and efficient to repeatedly run indefinitely on future updates.
+	private function ensureProperSubSettingsFormat() {
+		$query = function($beginning, $setClause){
+			return $this->query("
+				$beginning 
+					redcap_external_module_settings s
+					join redcap_external_modules m
+						on m.external_module_id = s.external_module_id
+				$setClause
+				where
+					m.directory_prefix = '" . $this->PREFIX . "'
+					and s.`key` = 'pipe_fields'
+					and s.value not like '[[%'
+			");
+		};
+
+		$result = $query('select project_id, value from', '');
+
+		$rowsExist = false;
+		while($row = $result->fetch_assoc()){
+			$rowsExist = true;
+			$this->log("Logging old 'pipe_fields' value before wrapping in extra array", $row);
+		}
+
+		if($rowsExist){
+			$query('update', "set value = concat('[', value, ']')");
+		}
 	}
 }
