@@ -10,19 +10,34 @@ namespace Vanderbilt\AutoRecordGenerationExternalModule;
 
 use ExternalModules\AbstractExternalModule;
 use ExternalModules\ExternalModules;
+use REDCap;
 
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
+		$this->copyValuesToDestinationProjects($record, $event_id, false);
+	}
+
+	function copyValuesToDestinationProjects($record, $event_id, $pullTriggerValueFromDB) {
 		$destinationProjects = $this->framework->getSubSettings('destination_projects');
 		foreach ($destinationProjects as $destinationProject) {
-			$this->handleDestinationProject($project_id, $record, $event_id, $destinationProject);
+			$this->handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB);
 		}
 	}
 
-	private function handleDestinationProject($project_id, $record, $event_id, $destinationProject) {
-        $triggerField = $_POST[$destinationProject['field_flag']];
-        $targetProjectID = $destinationProject['destination_project'];
+	private function handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB) {
+		$project_id = $this->getProjectId();
+
+		$flagFieldName = $destinationProject['field_flag'];
+		if($pullTriggerValueFromDB){
+			$results = json_decode(REDCap::getData($project_id, 'json', $record, $flagFieldName, $event_id), true);
+			$triggerField = $results[0][$flagFieldName];
+		}
+		else{
+			$triggerField = $_POST[$flagFieldName];
+		}
+
+		$targetProjectID = $destinationProject['destination_project'];
         $overwrite = ($destinationProject['overwrite-record'] == "overwrite" ? $destinationProject['overwrite-record'] : "normal");
         $queryLogs = $this->queryLogs("SELECT message, destination_record_id WHERE message='Auto record for $record'");
         $targetProject = new \Project($targetProjectID);
@@ -250,5 +265,23 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		if($rowsExist){
 			$query('update', "set value = concat('[', value, ']')");
 		}
+	}
+
+	function redcap_module_import_page_top() {
+		require_once __DIR__ . '/import-page-top.php';
+	}
+
+	function getEventNames(){
+		global $longitudinal;
+		$originalValue = $longitudinal;
+
+		// Override the longitudinal value so that event details are returned even if the project is not longitudinal
+		$longitudinal = true;
+
+		$result = REDCap::getEventNames(true);
+
+		$longitudinal = $originalValue;
+
+		return $result;
 	}
 }

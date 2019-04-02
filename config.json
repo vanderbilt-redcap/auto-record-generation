@@ -18,7 +18,8 @@
   "permissions": [
     "redcap_module_system_enable",
     "redcap_module_system_change_version",
-    "redcap_save_record"
+    "redcap_save_record",
+    "redcap_module_import_page_top"
   ],
 
   "links": {
