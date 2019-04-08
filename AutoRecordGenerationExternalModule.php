@@ -245,7 +245,13 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	// This function is required to update existing settings after 'pipe_fields' was wrapped in the 'destination_projects' sub settings group.
 	// This should have no effect on subsequent runs and should be safe and efficient to repeatedly run indefinitely on future updates.
 	private function ensureProperSubSettingsFormat() {
-		$query = function($beginning, $setClause){
+		$query = function($beginning, $setClause, $fieldName, $leadingBracketsRequired){
+			$prefix = '';
+			while($leadingBracketsRequired > 0){
+				$prefix .= '[';
+				$leadingBracketsRequired--;
+			}
+
 			return $this->query("
 				$beginning 
 					redcap_external_module_settings s
@@ -254,22 +260,27 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				$setClause
 				where
 					m.directory_prefix = '" . $this->PREFIX . "'
-					and s.`key` = 'pipe_fields'
-					and s.value not like '[[%'
+					and s.`key` = '$fieldName'
+					and s.value not like '$prefix%'
 			");
 		};
 
-		$result = $query('select project_id, value from', '');
+		$handleField = function($fieldName, $leadingBracketsRequired) use ($query){
+			$result = $query('select project_id, value from', '', $fieldName, $leadingBracketsRequired);
 
-		$rowsExist = false;
-		while($row = $result->fetch_assoc()){
-			$rowsExist = true;
-			$this->log("Logging old 'pipe_fields' value before wrapping in extra array", $row);
-		}
+			$rowsExist = false;
+			while($row = $result->fetch_assoc()){
+				$rowsExist = true;
+				$this->log("Logging old '$fieldName' value before wrapping in extra array", $row);
+			}
 
-		if($rowsExist){
-			$query('update', "set value = concat('[', value, ']')");
-		}
+			if($rowsExist){
+				$query('update', "set value = concat('[', value, ']'), type = 'json-array'", $fieldName, $leadingBracketsRequired);
+			}
+		};
+
+		$handleField('pipe_fields', 2);
+		$handleField('trigger_save_hook', 1);
 	}
 
 	function redcap_module_import_page_top() {
