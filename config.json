@@ -62,6 +62,11 @@
           "repeatable": false
         },
         {
+          "key": "trigger_save_hook",
+          "name": "Trigger the <b>redcap_save_record</b> hook on the destination project",
+          "type": "checkbox"
+        },
+        {
           "key": "pipe_fields",
           "name": "Data Field to Pipe to New Record (Field names must match, leave blank to transfer every data field)",
           "type": "field-list",

@@ -97,6 +97,11 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
             \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
+
+			if($this->getProjectSetting('trigger_save_hook') === true){
+				\Hooks::call('redcap_save_record', [$targetProjectID, $dataToPipe[$targetProject->table_pk], null, $targetProject->firstEventId]);
+			}
+
 			if ($destinationRecordID == "") {
                 $this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
             }
