@@ -256,24 +256,32 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				where
 					m.directory_prefix = '" . $this->PREFIX . "'
 					and s.`key` = '$fieldName'
-					and s.value not like '$prefix%'
+					and
+						(
+							type <> 'json-array'
+							or
+							s.value not like '$prefix%'
+						)
 			");
 		};
 
 		$handleField = function($fieldName, $leadingBracketsRequired) use ($query){
 			$result = $query('select project_id, value from', '', $fieldName, $leadingBracketsRequired);
 
-			$rowsExist = false;
 			while($row = $result->fetch_assoc()){
-				$rowsExist = true;
 				$this->log("Logging old '$fieldName' value before wrapping in extra array", $row);
-			}
 
-			if($rowsExist){
-				$query('update', "set value = concat('[', value, ']'), type = 'json-array'", $fieldName, $leadingBracketsRequired);
+				$projectId = $row['project_id'];
+
+				$value = $this->getProjectSetting($fieldName, $projectId);
+				$this->setProjectSetting($fieldName, [$value], $projectId);
 			}
 		};
 
+		$handleField('destination_project', 1);
+		$handleField('field_flag', 1);
+		$handleField('new_record', 1);
+		$handleField('overwrite-record', 1);
 		$handleField('pipe_fields', 2);
 	}
 
