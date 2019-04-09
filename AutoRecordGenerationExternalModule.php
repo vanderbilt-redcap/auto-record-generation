@@ -275,7 +275,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		};
 
 		$handleField('pipe_fields', 2);
-		$handleField('trigger_save_hook', 1);
 	}
 
 	function redcap_module_import_page_top() {
