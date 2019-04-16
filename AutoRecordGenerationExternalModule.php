@@ -96,7 +96,13 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			}
 
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
-            \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
+            $results = \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
+
+            $errors = $results['errors'];
+            if(!empty($errors)){
+            	error_log("The " . $this->getModuleName() . " module could not save record " . $dataToPipe[$targetProject->table_pk] . " for project $targetProjectID because of the following error(s): " . json_encode($errors, JSON_PRETTY_PRINT));
+            }
+
 			if ($destinationRecordID == "") {
                 $this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
             }
