@@ -15,15 +15,15 @@ use REDCap;
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
-		//$this->copyValuesToDestinationProjects($record, $event_id, false);
+		$this->copyValuesToDestinationProjects($record, $event_id, false);
 	}
 
 	function copyValuesToDestinationProjects($record, $event_id, $pullTriggerValueFromDB) {
 		$destinationProjects = $this->framework->getSubSettings('destination_projects');
 
-		foreach ($destinationProjects as $destinationProject) {
+		/*foreach ($destinationProjects as $destinationProject) {
 			$this->handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB);
-		}
+		}*/
 	}
 
 	private function handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB) {
