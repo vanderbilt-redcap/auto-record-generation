@@ -97,6 +97,11 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			}
 
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
+            echo "Target Project: $targetProjectID, Table PK: ".$targetProject->table_pk.", Target Event: ".$targetProject->firstEventId.", Overwrite: ".$overwrite."<br/>";
+			echo "Data to pipe:<br/>";
+			echo "<pre>";
+			print_r($dataToPipe);
+			echo "</pre>";
             $results = \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
 
             $errors = $results['errors'];
