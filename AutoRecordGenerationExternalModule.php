@@ -15,7 +15,7 @@ use REDCap;
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
-		$this->copyValuesToDestinationProjects($record, $event_id, false);
+		//$this->copyValuesToDestinationProjects($record, $event_id, false);
 	}
 
 	function copyValuesToDestinationProjects($record, $event_id, $pullTriggerValueFromDB) {
@@ -105,7 +105,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
 
 			if ($destinationRecordID == "") {
-                //$this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
+                $this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
             }
 		}
 	}
