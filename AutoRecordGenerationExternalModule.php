@@ -102,7 +102,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			echo "<pre>";
 			print_r($dataToPipe);
 			echo "</pre>";
-            $results = \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
+            //$results = \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
 
             $errors = $results['errors'];
             if(!empty($errors)){
