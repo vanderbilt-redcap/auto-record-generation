@@ -19,10 +19,16 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	}
 
 	function copyValuesToDestinationProjects($record, $event_id, $pullTriggerValueFromDB) {
+	    echo "Getting destination projects<br/>";
 		$destinationProjects = $this->framework->getSubSettings('destination_projects');
+		echo "Destination projects:<br/>";
+		echo "<pre>";
+		print_r($destinationProjects);
+		echo "</pre>";
 		foreach ($destinationProjects as $destinationProject) {
 			$this->handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB);
 		}
+		echo "End copying process<br/>";
 	}
 
 	private function handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB) {
