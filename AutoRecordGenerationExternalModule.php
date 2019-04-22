@@ -67,7 +67,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
         }
 
-		/*if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
+		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
 			//$fieldData = \MetaData::getFieldNames($project_id);
 			$fieldData = $this->getProjectFields($project_id);
 			//$targetFields = \MetaData::getFieldNames($targetProjectID);
@@ -97,7 +97,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			}
 
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
-            $results = \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
+            /*$results = \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
 
             $errors = $results['errors'];
             if(!empty($errors)){
@@ -106,8 +106,8 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 			if ($destinationRecordID == "") {
                 $this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
-            }
-		}*/
+            }*/
+		}
 	}
 
 	function parseRecordSetting($recordsetting,$recorddata) {
