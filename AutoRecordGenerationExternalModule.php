@@ -21,9 +21,9 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	function copyValuesToDestinationProjects($record, $event_id, $pullTriggerValueFromDB) {
 		$destinationProjects = $this->framework->getSubSettings('destination_projects');
 
-		/*foreach ($destinationProjects as $destinationProject) {
+		foreach ($destinationProjects as $destinationProject) {
 			$this->handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB);
-		}*/
+		}
 	}
 
 	private function handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB) {
@@ -67,7 +67,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
         }
 
-		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
+		/*if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
 			//$fieldData = \MetaData::getFieldNames($project_id);
 			$fieldData = $this->getProjectFields($project_id);
 			//$targetFields = \MetaData::getFieldNames($targetProjectID);
@@ -107,7 +107,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			if ($destinationRecordID == "") {
                 $this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
             }
-		}
+		}*/
 	}
 
 	function parseRecordSetting($recordsetting,$recorddata) {
