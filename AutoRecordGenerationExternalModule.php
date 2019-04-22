@@ -10,19 +10,34 @@ namespace Vanderbilt\AutoRecordGenerationExternalModule;
 
 use ExternalModules\AbstractExternalModule;
 use ExternalModules\ExternalModules;
+use REDCap;
 
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
-		/*$destinationProjects = $this->framework->getSubSettings('destination_projects');
-		foreach ($destinationProjects as $destinationProject) {
-			$this->handleDestinationProject($project_id, $record, $event_id, $destinationProject);
-		}*/
+		$this->copyValuesToDestinationProjects($record, $event_id, false);
 	}
 
-	private function handleDestinationProject($project_id, $record, $event_id, $destinationProject) {
-        $triggerField = $_POST[$destinationProject['field_flag']];
-        $targetProjectID = $destinationProject['destination_project'];
+	function copyValuesToDestinationProjects($record, $event_id, $pullTriggerValueFromDB) {
+		$destinationProjects = $this->framework->getSubSettings('destination_projects');
+		foreach ($destinationProjects as $destinationProject) {
+			$this->handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB);
+		}
+	}
+
+	private function handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB) {
+		$project_id = $this->getProjectId();
+
+		$flagFieldName = $destinationProject['field_flag'];
+		if($pullTriggerValueFromDB){
+			$results = json_decode(REDCap::getData($project_id, 'json', $record, $flagFieldName, $event_id), true);
+			$triggerField = $results[0][$flagFieldName];
+		}
+		else{
+			$triggerField = $_POST[$flagFieldName];
+		}
+
+		$targetProjectID = $destinationProject['destination_project'];
         $overwrite = ($destinationProject['overwrite-record'] == "overwrite" ? $destinationProject['overwrite-record'] : "normal");
         $queryLogs = $this->queryLogs("SELECT message, destination_record_id WHERE message='Auto record for $record'");
         $targetProject = new \Project($targetProjectID);
@@ -81,7 +96,13 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			}
 
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
-            \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
+            $results = \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
+
+            $errors = $results['errors'];
+            if(!empty($errors)){
+            	error_log("The " . $this->getModuleName() . " module could not save record " . $dataToPipe[$targetProject->table_pk] . " for project $targetProjectID because of the following error(s): " . json_encode($errors, JSON_PRETTY_PRINT));
+            }
+
 			if ($destinationRecordID == "") {
                 $this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
             }
@@ -225,7 +246,13 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	// This function is required to update existing settings after 'pipe_fields' was wrapped in the 'destination_projects' sub settings group.
 	// This should have no effect on subsequent runs and should be safe and efficient to repeatedly run indefinitely on future updates.
 	private function ensureProperSubSettingsFormat() {
-		$query = function($beginning, $setClause){
+		$query = function($beginning, $setClause, $fieldName, $leadingBracketsRequired){
+			$prefix = '';
+			while($leadingBracketsRequired > 0){
+				$prefix .= '[';
+				$leadingBracketsRequired--;
+			}
+
 			return $this->query("
 				$beginning 
 					redcap_external_module_settings s
@@ -234,21 +261,51 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				$setClause
 				where
 					m.directory_prefix = '" . $this->PREFIX . "'
-					and s.`key` = 'pipe_fields'
-					and s.value not like '[[%'
+					and s.`key` = '$fieldName'
+					and
+						(
+							type <> 'json-array'
+							or
+							s.value not like '$prefix%'
+						)
 			");
 		};
 
-		$result = $query('select project_id, value from', '');
+		$handleField = function($fieldName, $leadingBracketsRequired) use ($query){
+			$result = $query('select project_id, value from', '', $fieldName, $leadingBracketsRequired);
 
-		$rowsExist = false;
-		while($row = $result->fetch_assoc()){
-			$rowsExist = true;
-			$this->log("Logging old 'pipe_fields' value before wrapping in extra array", $row);
-		}
+			while($row = $result->fetch_assoc()){
+				$this->log("Logging old '$fieldName' value before wrapping in extra array", $row);
 
-		if($rowsExist){
-			$query('update', "set value = concat('[', value, ']')");
-		}
+				$projectId = $row['project_id'];
+
+				$value = $this->getProjectSetting($fieldName, $projectId);
+				$this->setProjectSetting($fieldName, [$value], $projectId);
+			}
+		};
+
+		$handleField('destination_project', 1);
+		$handleField('field_flag', 1);
+		$handleField('new_record', 1);
+		$handleField('overwrite-record', 1);
+		$handleField('pipe_fields', 2);
+	}
+
+	function redcap_module_import_page_top() {
+		require_once __DIR__ . '/import-page-top.php';
+	}
+
+	function getEventNames(){
+		global $longitudinal;
+		$originalValue = $longitudinal;
+
+		// Override the longitudinal value so that event details are returned even if the project is not longitudinal
+		$longitudinal = true;
+
+		$result = REDCap::getEventNames(true);
+
+		$longitudinal = $originalValue;
+
+		return $result;
 	}
 }
