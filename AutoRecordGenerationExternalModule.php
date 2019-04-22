@@ -14,10 +14,10 @@ use ExternalModules\ExternalModules;
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
-		$destinationProjects = $this->framework->getSubSettings('destination_projects');
+		/*$destinationProjects = $this->framework->getSubSettings('destination_projects');
 		foreach ($destinationProjects as $destinationProject) {
 			$this->handleDestinationProject($project_id, $record, $event_id, $destinationProject);
-		}
+		}*/
 	}
 
 	private function handleDestinationProject($project_id, $record, $event_id, $destinationProject) {
