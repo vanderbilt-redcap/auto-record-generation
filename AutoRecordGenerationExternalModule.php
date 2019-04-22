@@ -20,15 +20,10 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 	function copyValuesToDestinationProjects($record, $event_id, $pullTriggerValueFromDB) {
 		$destinationProjects = $this->framework->getSubSettings('destination_projects');
-echo "<pre>";
-print_r($_POST);
-echo "</pre>";
+
 		foreach ($destinationProjects as $destinationProject) {
 			$this->handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB);
 		}
-        echo "<pre>";
-        print_r($_POST);
-        echo "</pre>";
 	}
 
 	private function handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB) {
@@ -106,12 +101,11 @@ echo "</pre>";
 
             $errors = $results['errors'];
             if(!empty($errors)){
-                echo "Came in here for errors: ".json_encode($errors,JSON_PRETTY_PRINT)."<br/>";
             	error_log("The " . $this->getModuleName() . " module could not save record " . $dataToPipe[$targetProject->table_pk] . " for project $targetProjectID because of the following error(s): " . json_encode($errors, JSON_PRETTY_PRINT));
             }
 
 			if ($destinationRecordID == "") {
-                $this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
+                //$this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
             }
 		}
 	}
