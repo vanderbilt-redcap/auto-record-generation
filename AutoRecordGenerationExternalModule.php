@@ -20,18 +20,23 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 	function copyValuesToDestinationProjects($record, $event_id, $pullTriggerValueFromDB) {
 		$destinationProjects = $this->framework->getSubSettings('destination_projects');
-
+echo "<pre>";
+print_r($_POST);
+echo "</pre>";
 		foreach ($destinationProjects as $destinationProject) {
 			$this->handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB);
 		}
+        echo "<pre>";
+        print_r($_POST);
+        echo "</pre>";
 	}
 
 	private function handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB) {
-		$projectID = $this->getProjectId();
+		$project_id = $this->getProjectId();
 
 		$flagFieldName = $destinationProject['field_flag'];
 		if($pullTriggerValueFromDB){
-			$results = json_decode(REDCap::getData($projectID, 'json', $record, $flagFieldName, $event_id), true);
+			$results = json_decode(REDCap::getData($project_id, 'json', $record, $flagFieldName, $event_id), true);
 			$triggerField = $results[0][$flagFieldName];
 		}
 		else{
@@ -42,7 +47,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $overwrite = ($destinationProject['overwrite-record'] == "overwrite" ? $destinationProject['overwrite-record'] : "normal");
         $queryLogs = $this->queryLogs("SELECT message, destination_record_id WHERE message='Auto record for $record'");
         $targetProject = new \Project($targetProjectID);
-        $sourceProject = new \Project($projectID);
+        $sourceProject = new \Project($project_id);
 
         $destinationRecordID = "";
         while ($row = db_fetch_assoc($queryLogs)) {
@@ -51,7 +56,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
         }
 
-        $recordData = \Records::getData($projectID,'array',array($record));
+        $recordData = \Records::getData($project_id,'array',array($record));
 
         $newRecordName = $this->parseRecordSetting($destinationProject["new_record"],$recordData[$record][$event_id]);
 
@@ -68,12 +73,12 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         }
 
 		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
-			//$fieldData = \MetaData::getFieldNames($projectID);
-			$fieldData = $this->getProjectFields($projectID);
+			//$fieldData = \MetaData::getFieldNames($project_id);
+			$fieldData = $this->getProjectFields($project_id);
 			//$targetFields = \MetaData::getFieldNames($targetProjectID);
 			$targetFields = $this->getProjectFields($targetProjectID);
 			$sourceFields = $this->getSourceFields($fieldData,$destinationProject['pipe_fields']);
-			//$recordData = \Records::getData($projectID,'array',array($record),$targetFields);
+			//$recordData = \Records::getData($project_id,'array',array($record),$targetFields);
 
 			$dataToPipe = array();
 
@@ -101,6 +106,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
             $errors = $results['errors'];
             if(!empty($errors)){
+                echo "Came in here for errors: ".json_encode($errors,JSON_PRETTY_PRINT)."<br/>";
             	error_log("The " . $this->getModuleName() . " module could not save record " . $dataToPipe[$targetProject->table_pk] . " for project $targetProjectID because of the following error(s): " . json_encode($errors, JSON_PRETTY_PRINT));
             }
 
