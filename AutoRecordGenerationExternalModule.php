@@ -105,9 +105,11 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                     $dataToPipe[$targetProject->table_pk] = $autoRecordID;
                 }
 			}
-
+			
 			if($debug){
-				$this->log("Saving data for pid $targetProjectID", $dataToPipe);
+				$this->log("Saving data for pid $targetProjectID", [
+					'json-data' => json_encode($dataToPipe, JSON_PRETTY_PRINT)
+				]);
 			}
 
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
