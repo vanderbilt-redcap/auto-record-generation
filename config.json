@@ -62,6 +62,11 @@
           "repeatable": false
         },
         {
+          "key": "enable_debug_logging",
+          "name": "Enable Debug Logging",
+          "type": "checkbox"
+        },
+        {
           "key": "pipe_fields",
           "name": "Data Field to Pipe to New Record (Field names must match, leave blank to transfer every data field)",
           "type": "field-list",

@@ -42,6 +42,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $queryLogs = $this->queryLogs("SELECT message, destination_record_id WHERE message='Auto record for $record'");
         $targetProject = new \Project($targetProjectID);
         $sourceProject = new \Project($project_id);
+        $debug = $destinationProject['enable_debug_logging'];
 
         $destinationRecordID = "";
         while ($row = db_fetch_assoc($queryLogs)) {
@@ -65,6 +66,16 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 }
             }
         }
+
+		if($debug){
+			$this->log("Checking values for pid $targetProjectID", [
+				'$triggerField' => $triggerField,
+				'$targetProjectID' => $targetProjectID,
+				'$destinationRecordID' => $destinationRecordID,
+				'$overwrite' => $overwrite,
+				'$destRecordExists' => $destRecordExists
+			]);
+		}
 
 		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
 			//$fieldData = \MetaData::getFieldNames($project_id);
@@ -93,6 +104,10 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                     $autoRecordID = $this->getAutoID($targetProjectID, $event_id);
                     $dataToPipe[$targetProject->table_pk] = $autoRecordID;
                 }
+			}
+
+			if($debug){
+				$this->log("Saving data for pid $targetProjectID", $dataToPipe);
 			}
 
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
