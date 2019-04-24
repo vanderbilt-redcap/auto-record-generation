@@ -15,28 +15,23 @@ use REDCap;
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
-		$this->copyValuesToDestinationProjects($record, $event_id, false);
+		$this->copyValuesToDestinationProjects($record, $event_id);
 	}
 
-	function copyValuesToDestinationProjects($record, $event_id, $pullTriggerValueFromDB) {
+	function copyValuesToDestinationProjects($record, $event_id) {
 		$destinationProjects = $this->framework->getSubSettings('destination_projects');
 
 		foreach ($destinationProjects as $destinationProject) {
-			$this->handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB);
+			$this->handleDestinationProject($record, $event_id, $destinationProject);
 		}
 	}
 
-	private function handleDestinationProject($record, $event_id, $destinationProject, $pullTriggerValueFromDB) {
+	private function handleDestinationProject($record, $event_id, $destinationProject) {
 		$project_id = $this->getProjectId();
 
 		$flagFieldName = $destinationProject['field_flag'];
-		if($pullTriggerValueFromDB){
-			$results = json_decode(REDCap::getData($project_id, 'json', $record, $flagFieldName, $event_id), true);
-			$triggerField = $results[0][$flagFieldName];
-		}
-		else{
-			$triggerField = $_POST[$flagFieldName];
-		}
+		$results = json_decode(REDCap::getData($project_id, 'json', $record, $flagFieldName, $event_id), true);
+		$triggerField = $results[0][$flagFieldName];
 
 		$targetProjectID = $destinationProject['destination_project'];
         $overwrite = ($destinationProject['overwrite-record'] == "overwrite" ? $destinationProject['overwrite-record'] : "normal");
@@ -105,6 +100,12 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                     $autoRecordID = $this->getAutoID($targetProjectID, $event_id);
                     $dataToPipe[$targetProject->table_pk] = $autoRecordID;
                 }
+			}
+			
+			if($debug){
+				$this->log("Saving data for pid $targetProjectID", [
+					'json-data' => json_encode($dataToPipe, JSON_PRETTY_PRINT)
+				]);
 			}
 
 			if($debug){
