@@ -13,7 +13,7 @@
     }
   ],
 
-  "description": "Module that allows for a new record to be generated in another project (or the same project) on a flagging field being saved. Allows for data fields to be transferred to the new record as well.",
+  "description": "Module that allows for a new record to be generated in another project (or the same project) on a flagging field being saved. Allows for data fields to be transferred to the new record as well.<br><b>Events and repeating instruments are NOT currently supported.</b>",
 
   "permissions": [
     "redcap_module_system_enable",
@@ -68,7 +68,7 @@
         },
         {
           "key": "pipe_fields",
-          "name": "Data Field to Pipe to New Record (Field names must match, leave blank to transfer every data field)",
+          "name": "<b>Data Field to Pipe to New Record</b><br> • Field names must match on the destination project<br> • Leave blank to transfer every data field<br> • Fields on repeatable forms in either this project the or destination will be ignored",
           "type": "field-list",
           "repeatable": true
         }
