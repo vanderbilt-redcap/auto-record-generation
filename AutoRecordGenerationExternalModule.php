@@ -110,7 +110,16 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
             $errors = $results['errors'];
             if(!empty($errors)){
-            	error_log("The " . $this->getModuleName() . " module could not save record " . $dataToPipe[$targetProject->table_pk] . " for project $targetProjectID because of the following error(s): " . json_encode($errors, JSON_PRETTY_PRINT));
+            	$errorString = stripslashes(json_encode($errors, JSON_PRETTY_PRINT));
+            	$errorString = str_replace('""', '"', $errorString);
+
+            	$message = "The " . $this->getModuleName() . " module could not copy values for record " . $dataToPipe[$targetProject->table_pk] . " from project $project_id to project $targetProjectID because of the following error(s):\n\n$errorString";
+            	error_log($message);
+
+            	$errorEmail = $this->getProjectSetting('error_email');
+            	if(!empty($errorEmail)){
+            		mail($errorEmail, $this->getModuleName() . " Module Error", $message);
+            	}
             }
 
 			if ($destinationRecordID == "") {
