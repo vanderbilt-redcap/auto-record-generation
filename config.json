@@ -31,6 +31,11 @@
 
   "project-settings": [
     {
+      "key": "error_email",
+      "name": "Report errors to this email address<br>(in addition to logging them)",
+      "type": "text"
+    },
+    {
       "key": "destination_projects",
       "name": "Destination Project",
       "repeatable": true,
