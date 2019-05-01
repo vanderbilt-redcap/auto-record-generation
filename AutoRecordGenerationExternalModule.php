@@ -74,11 +74,9 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		}
 
 		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
-			//$fieldData = \MetaData::getFieldNames($project_id);
-			$fieldData = $this->getProjectFields($project_id);
 			//$targetFields = \MetaData::getFieldNames($targetProjectID);
 			$targetFields = $this->getProjectFields($targetProjectID);
-			$sourceFields = $this->getSourceFields($fieldData,$destinationProject['pipe_fields']);
+			$sourceFields = $this->getSourceFields($project_id,$destinationProject['pipe_fields']);
 			//$recordData = \Records::getData($project_id,'array',array($record),$targetFields);
 
 			$dataToPipe = array();
@@ -145,23 +143,37 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		return $returnString;
 	}
 
-	function getSourceFields($allFields,$pipeSettings) {
+	function getSourceFields($project_id,$pipeSettings) {
+		$nonRepeatableFields = $this->getProjectFields($project_id);
+
 		$returnFields = array();
 		if (is_array($pipeSettings) && !empty($pipeSettings) && $pipeSettings[0] != "") {
-			$returnFields = $pipeSettings;
+			$returnFields = array_intersect($nonRepeatableFields, $pipeSettings);
 		}
 		else {
-			$returnFields = $allFields;
+			$returnFields = $nonRepeatableFields;
 		}
 		return $returnFields;
 	}
 
 	function getProjectFields($projectID) {
 		$fieldArray = array();
-		$sql = "SELECT field_name
-			FROM redcap_metadata
-			WHERE project_id=$projectID
-			ORDER BY field_order";
+		$sql = "
+			SELECT
+				m.field_name
+			FROM redcap_metadata m 
+			LEFT JOIN redcap_events_arms a 
+				ON a.project_id = m.project_id 
+			LEFT JOIN redcap_events_metadata e 
+				ON e.arm_id = a.arm_id 
+			LEFT JOIN redcap_events_repeat r 
+				ON r.event_id = e.event_id 
+				AND r.form_name = m.form_name 
+			WHERE
+				m.project_id=$projectID 
+				AND r.event_id IS NULL -- exclude repeatable fields since they aren't currently supported
+			ORDER BY field_order
+		";
 		//echo "$sql<br/>";
 		$result = $this->query($sql);
 		while ($row = db_fetch_assoc($result)) {
