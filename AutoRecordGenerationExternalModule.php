@@ -30,7 +30,15 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 		$flagFieldName = $destinationProject['field_flag'];
 		$results = json_decode(REDCap::getData($project_id, 'json', $record, $flagFieldName, $event_id), true);
-		$triggerField = $results[0][$flagFieldName];
+		$triggerFieldValue = $results[0][$flagFieldName];
+		$triggerFieldType = $this->getFieldType($flagFieldName);
+		if(in_array($triggerFieldType, ['yesno', 'truefalse'])){
+			$triggerFieldSet = $triggerFieldValue === "1";
+		}
+		else{
+			$triggerFieldSet = $triggerFieldValue != "";
+		}
+
 
 		$targetProjectID = $destinationProject['destination_project'];
         $overwrite = ($destinationProject['overwrite-record'] == "overwrite" ? $destinationProject['overwrite-record'] : "normal");
@@ -64,7 +72,8 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 		if($debug){
 			$this->log("Checking values for pid $targetProjectID", [
-				'$triggerField' => $triggerField,
+				'$triggerFieldValue' => $triggerFieldValue,
+				'$triggerFieldType' => $triggerFieldType,
 				'$targetProjectID' => $targetProjectID,
 				'$destinationRecordID' => $destinationRecordID,
 				'$overwrite' => $overwrite,
@@ -72,7 +81,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			]);
 		}
 
-		if ($triggerField != "" && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
+		if ($triggerFieldSet && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
 			//$targetFields = \MetaData::getFieldNames($targetProjectID);
 			$targetFields = $this->getProjectFields($targetProjectID);
 			$sourceFields = $this->getSourceFields($project_id,$destinationProject['pipe_fields']);
@@ -126,6 +135,18 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 $this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
             }
 		}
+	}
+
+	private function getFieldType($fieldName) {
+		if(empty($fieldName)){
+			return null;
+		}
+
+		$fieldName = db_real_escape_string($fieldName);
+		$result = $this->query("select element_type from redcap_metadata where project_id = " . $this->getProjectId() . " and field_name = '$fieldName'");
+		$row = $result->fetch_assoc();
+
+		return $row['element_type'];
 	}
 
 	function parseRecordSetting($recordsetting,$recorddata) {
