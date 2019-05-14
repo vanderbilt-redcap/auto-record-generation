@@ -97,7 +97,8 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                     $dataToPipe[$targetProject->table_pk] = $destinationRecordID;
                 }
                 else {
-                    $autoRecordID = $this->getAutoID($targetProjectID, $event_id);
+                    //$autoRecordID = $this->getAutoID($targetProjectID, $event_id);
+                    $autoRecordID = $this->framework->addAutoNumberedRecord($targetProjectID);
                     $dataToPipe[$targetProject->table_pk] = $autoRecordID;
                 }
 			}
@@ -179,7 +180,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		return $enumArray;
 	}
 
-	function getAutoId($projectId, $eventId = "") {
+	/*function getAutoId($projectId, $eventId = "") {
 		$inTransaction = false;
 		try {
 			@db_query("BEGIN");
@@ -253,7 +254,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		}
 		// Return new auto id value
 		return $newParticipantId;
-	}
+	}*/
 
 	function redcap_module_system_enable($version) {
 		// A version of this module with the older settings format could have previously been enabled.
