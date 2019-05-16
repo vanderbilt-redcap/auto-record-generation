@@ -116,10 +116,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				]);
 			}
 
-			if($debug){
-				$this->log("Saving data for pid $targetProjectID", $dataToPipe);
-			}
-
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
             /*echo "Target Project: $targetProjectID, Table PK: ".$targetProject->table_pk.", Target Event: ".$targetProject->firstEventId.", Overwrite: ".$overwrite."<br/>";
 			echo "Data to pipe:<br/>";
