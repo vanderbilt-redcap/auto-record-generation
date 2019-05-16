@@ -85,7 +85,7 @@
 		}
 
 		module.cacheRecordInfo = function(recordInfo){
-			$.post(<?=json_encode($this->getUrl('cache-imported-record-info.php'))?>, JSON.stringify(recordInfo), function(data){
+			$.post(<?=json_encode($this->getUrl('cache-imported-record-info.php'))?>, {data: JSON.stringify(recordInfo)}, function(data){
 				if(data !== 'success'){
 					module.displayAndThrowError('Unexpected cache result: ' + data)
 				}
