@@ -136,7 +136,15 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
             	$errorEmail = $this->getProjectSetting('error_email');
             	if(!empty($errorEmail)){
-            		mail($errorEmail, $this->getModuleName() . " Module Error", $message);
+                    ## Add check for universal from email address
+                    global $from_email;
+                    if($from_email != '') {
+                        $headers = "From: ".$from_email."\r\n";
+                    }
+                    else {
+                        $headers = null;
+                    }
+                    mail($errorEmail, $this->getModuleName() . " Module Error", $message, $headers);
             	}
             }
 
