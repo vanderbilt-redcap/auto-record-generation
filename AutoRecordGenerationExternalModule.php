@@ -16,63 +16,6 @@ use REDCap;
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
-        $destinationProjects = $this->framework->getSubSettings('destination_projects');
-        $sourceProject = new \Project($project_id);
-        /*echo "<pre>";
-        print_r($sourceProject->eventInfo);
-        echo "</pre>";
-        echo "<pre>";
-        print_r(array_slice($sourceProject->eventInfo,0,1,true));
-        echo "</pre>";
-        echo "<pre>";
-        print_r($sourceProject->eventInfo);
-        echo "</pre>";
-        echo "<pre>";
-        print_r($sourceProject->isRepeatingForm(275,'survey'));
-        echo "</pre>";
-        echo "<pre>";
-        print_r($sourceProject->eventsForms);
-        echo "</pre>";
-        echo "<pre>";
-        print_r($sourceProject->uniqueEventNames);
-        echo "</pre>";*/
-
-        $sourceData = REDCap::getData($project_id,'array',array($record),array(),array($event_id));
-        echo "<pre>";
-        print_r($sourceData);
-        echo "</pre>";
-
-        foreach ($destinationProjects as $destinationProject) {
-            $targetProject = new \Project($destinationProject['destination_project']);
-            $sourceFields = $this->getSourceFields($project_id,$destinationProject['pipe_fields']);
-
-            $destRecordID = $this->getNewRecordName($sourceProject,$sourceData,$destinationProject["new_record"],$event_id,$repeat_instance);
-            //$destRecordID = $this->parseRecordSetting($destinationProject["new_record"],$sourceData);
-            $destinationData = $this->translateRecordData($sourceData,$sourceProject,$targetProject,$sourceFields,$destRecordID);
-            echo "Dest Data:<br/>";
-            echo "<pre>";
-            print_r($destinationData);
-            echo "</pre>";
-            /*echo "<pre>";
-            print_r($destinationProject);
-            echo "</pre>";
-            $matchEvent = $destinationProject['match_events'];
-            $eventToPipe = $targetProject->firstEventId;
-            echo "Match: $matchEvent<br/>";
-            if ($matchEvent == "1") {
-                $findName = $sourceProject->eventInfo[$event_id]['name'];
-                echo "Finding $findName<br/>";
-                foreach($targetProject->eventInfo as $destEvent => $destEventInfo) {
-                    echo "<pre>";
-                    print_r($destEventInfo);
-                    echo "</pre>";
-                    if ($destEventInfo['name'] == $findName) {
-                        $eventToPipe = $destEvent;
-                    }
-                }
-            }
-            echo "Piping to $eventToPipe<br/>";*/
-        }
     }
 
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
