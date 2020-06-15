@@ -10,57 +10,177 @@ namespace Vanderbilt\AutoRecordGenerationExternalModule;
 
 use ExternalModules\AbstractExternalModule;
 use ExternalModules\ExternalModules;
+use mysql_xdevapi\Exception;
 use REDCap;
 
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
+    function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
+        $destinationProjects = $this->framework->getSubSettings('destination_projects');
+        $sourceProject = new \Project($project_id);
+        /*echo "<pre>";
+        print_r($sourceProject->eventInfo);
+        echo "</pre>";
+        echo "<pre>";
+        print_r(array_slice($sourceProject->eventInfo,0,1,true));
+        echo "</pre>";
+        echo "<pre>";
+        print_r($sourceProject->eventInfo);
+        echo "</pre>";
+        echo "<pre>";
+        print_r($sourceProject->isRepeatingForm(275,'survey'));
+        echo "</pre>";
+        echo "<pre>";
+        print_r($sourceProject->eventsForms);
+        echo "</pre>";
+        echo "<pre>";
+        print_r($sourceProject->uniqueEventNames);
+        echo "</pre>";*/
+
+        $sourceData = REDCap::getData($project_id,'array',array($record),array(),array($event_id));
+        echo "<pre>";
+        print_r($sourceData);
+        echo "</pre>";
+
+        foreach ($destinationProjects as $destinationProject) {
+            $targetProject = new \Project($destinationProject['destination_project']);
+            $sourceFields = $this->getSourceFields($project_id,$destinationProject['pipe_fields']);
+
+            $destRecordID = $this->getNewRecordName($sourceProject,$sourceData,$destinationProject["new_record"],$event_id,$repeat_instance);
+            //$destRecordID = $this->parseRecordSetting($destinationProject["new_record"],$sourceData);
+            $destinationData = $this->translateRecordData($sourceData,$sourceProject,$targetProject,$sourceFields,$destRecordID);
+            echo "Dest Data:<br/>";
+            echo "<pre>";
+            print_r($destinationData);
+            echo "</pre>";
+            /*echo "<pre>";
+            print_r($destinationProject);
+            echo "</pre>";
+            $matchEvent = $destinationProject['match_events'];
+            $eventToPipe = $targetProject->firstEventId;
+            echo "Match: $matchEvent<br/>";
+            if ($matchEvent == "1") {
+                $findName = $sourceProject->eventInfo[$event_id]['name'];
+                echo "Finding $findName<br/>";
+                foreach($targetProject->eventInfo as $destEvent => $destEventInfo) {
+                    echo "<pre>";
+                    print_r($destEventInfo);
+                    echo "</pre>";
+                    if ($destEventInfo['name'] == $findName) {
+                        $eventToPipe = $destEvent;
+                    }
+                }
+            }
+            echo "Piping to $eventToPipe<br/>";*/
+        }
+    }
+
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
-		$this->copyValuesToDestinationProjects($record, $event_id);
+		$this->copyValuesToDestinationProjects($record, $event_id, $instrument, $repeat_instance);
 	}
 
-	function copyValuesToDestinationProjects($record, $event_id) {
+	function getNewRecordName(\Project $project, $recordData,$recordSetting,$event_id,$repeat_instance = 1) {
+        $newRecordID = "";
+        if ($recordSetting == "") {
+            $newRecordID = $this->getAutoId($project->project_id,$project->firstEventId);
+        }
+        else {
+            $validRecordData = array();
+
+            foreach ($recordData as $recordID => $data) {
+                /*if ($data['redcap_event_name'] == $uniqueEventName || !isset($data['redcap_event_name'])) {
+                    $validRecordData = $data;
+                }*/
+                foreach ($data as $eventID => $eventData) {
+                    if ($eventID == "repeat_instances") {
+                        foreach ($eventData as $subEventID => $subEventData) {
+                            if ($subEventID == $event_id) {
+                                $destEventRepeats = $project->isRepeatingEvent($subEventID);
+                                foreach ($subEventData as $subInstrument => $subInstrumentData) {
+                                    $destInstrumentRepeats = ($subInstrument != "" ? $project->isRepeatingForm($subEventID, $subInstrument) : 0);
+                                    foreach ($subInstrumentData as $subInstance => $subInstanceData) {
+                                        if ($subInstance == $repeat_instance) {
+                                            foreach ($subInstanceData as $fieldName => $fieldValue) {
+                                                if ($destInstrumentRepeats || $destEventRepeats) {
+                                                    $validRecordData[$fieldName] = $fieldValue;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } elseif ($eventID == $event_id) {
+                        $destEventRepeats = $project->isRepeatingEvent($event_id);
+                        foreach ($eventData as $fieldName => $fieldValue) {
+                            $destInstrumentRepeats = $project->isRepeatingForm($eventID, $project->metadata[$fieldName]['form_name']);
+                            if (!$destEventRepeats && !$destInstrumentRepeats) {
+                                $validRecordData[$fieldName] = $fieldValue;
+                            }
+                        }
+                    }
+                }
+            }
+            $newRecordID = $this->parseRecordSetting($recordSetting,$validRecordData);
+        }
+        return $newRecordID;
+    }
+
+	function copyValuesToDestinationProjects($record, $event_id, $instrument, $repeat_instance = 1) {
 		$destinationProjects = $this->framework->getSubSettings('destination_projects');
 
+        $project_id = $this->getProjectId();
 		foreach ($destinationProjects as $destinationProject) {
-			$this->handleDestinationProject($record, $event_id, $destinationProject);
+            $flagFieldName = $destinationProject['field_flag'];
+            $flagFieldForm =
+            $results = REDCap::getData($project_id, 'array', $record, $flagFieldName, $event_id);
+
+            if (isset($results[$record]['repeat_instances'][$event_id][$instrument][$repeat_instance][$flagFieldName])) {
+                $triggerFieldValue = $results[$record]['repeat_instances'][$event_id][$instrument][$repeat_instance][$flagFieldName];
+            }
+            elseif (isset($results[$record]['repeat_instances'][$event_id][''][$repeat_instance][$flagFieldName])) {
+                $triggerFieldValue = $results[$record]['repeat_instances'][$event_id][''][$repeat_instance][$flagFieldName];
+            }
+            else {
+                $triggerFieldValue = $results[$record][$event_id][$flagFieldName];
+            }
+            $triggerFieldType = $this->getFieldType($flagFieldName);
+            if(in_array($triggerFieldType, ['yesno', 'truefalse'])){
+                $triggerFieldSet = $triggerFieldValue === "1";
+            }
+            else{
+                $triggerFieldSet = $triggerFieldValue != "";
+            }
+            if ($triggerFieldSet) {
+                $this->handleDestinationProject($record, $event_id, $destinationProject, $repeat_instance);
+            }
 		}
 	}
 
-	private function handleDestinationProject($record, $event_id, $destinationProject) {
+	private function handleDestinationProject($record, $event_id, $destinationProject, $repeat_instance = 1) {
 		$project_id = $this->getProjectId();
-
-		$flagFieldName = $destinationProject['field_flag'];
-		$results = json_decode(REDCap::getData($project_id, 'json', $record, $flagFieldName, $event_id), true);
-		$triggerFieldValue = $results[0][$flagFieldName];
-		$triggerFieldType = $this->getFieldType($flagFieldName);
-		if(in_array($triggerFieldType, ['yesno', 'truefalse'])){
-			$triggerFieldSet = $triggerFieldValue === "1";
-		}
-		else{
-			$triggerFieldSet = $triggerFieldValue != "";
-		}
-
 
 		$targetProjectID = $destinationProject['destination_project'];
         $overwrite = ($destinationProject['overwrite-record'] == "overwrite" ? $destinationProject['overwrite-record'] : "normal");
-        $queryLogs = $this->queryLogs("SELECT message, destination_record_id WHERE message='Auto record for $record'");
+        $queryLogs = $this->queryLogs("SELECT message, record WHERE message='Auto record for $record' AND project_id=$project_id");
         $targetProject = new \Project($targetProjectID);
         $sourceProject = new \Project($project_id);
         $debug = $destinationProject['enable_debug_logging'];
 
         $destinationRecordID = "";
-        while ($row = db_fetch_assoc($queryLogs)) {
-            if ($row['destination_record_id'] != "") {
-                $destinationRecordID = $row['destination_record_id'];
+        while ($row = db_fetch_assoc($queryLogs)) {;
+            if ($row['record'] != "") {
+                $destinationRecordID = $row['record'];
             }
         }
 
-        $recordData = \Records::getData($project_id,'array',array($record));
+        $recordData = \Records::getData($project_id,'array',$record);
 
-        $newRecordName = $this->parseRecordSetting($destinationProject["new_record"],$recordData[$record][$event_id]);
+        $uniqueEventName = $sourceProject->getUniqueEventNames()[$event_id];
+        $newRecordName = $this->getNewRecordName($sourceProject,$recordData,$destinationProject["new_record"],$event_id,$repeat_instance);
 
         $destRecordExists = false;
-        $recordToCheck = ($newRecordName != "" ? $newRecordName : $destinationRecordID);
+        $recordToCheck = ($destinationRecordID != "" ? $destinationRecordID : $this->getNewRecordName($sourceProject,$recordData,$destinationProject["new_record"],$event_id,$repeat_instance));
         if ($recordToCheck != "") {
             $targetRecordSql = "SELECT record FROM redcap_data WHERE project_id='$targetProjectID' && record='$recordToCheck' LIMIT 1";
             $result = db_query($targetRecordSql);
@@ -71,60 +191,23 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
         }
 
-		if($debug){
+		if($debug == "1"){
 			$this->log("Checking values for pid $targetProjectID", [
-				'$triggerFieldValue' => $triggerFieldValue,
-				'$triggerFieldType' => $triggerFieldType,
-				'$targetProjectID' => $targetProjectID,
-				'$destinationRecordID' => $destinationRecordID,
+			    '$targetProjectID' => $targetProjectID,
+				'$destinationRecordID' => $recordToCheck,
 				'$overwrite' => $overwrite,
 				'$destRecordExists' => $destRecordExists
 			]);
 		}
 
-		if ($triggerFieldSet && $targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
-			//$targetFields = \MetaData::getFieldNames($targetProjectID);
-			$targetFields = $this->getProjectFields($targetProjectID);
+		if ($targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
 			$sourceFields = $this->getSourceFields($project_id,$destinationProject['pipe_fields']);
 			//$recordData = \Records::getData($project_id,'array',array($record),$targetFields);
-
 			$dataToPipe = array();
 
-			foreach ($targetFields as $targetField) {
-				if (in_array($targetField,$sourceFields) && $targetProject->metadata[$targetField]['element_type'] != 'descriptive' && $targetProject->metadata[$targetField]['element_enum'] == $sourceProject->metadata[$targetField]['element_enum']) {
-					$dataToPipe[$targetField] = $recordData[$record][$event_id][$targetField];
-				}
-			}
-
-			if ($newRecordName != "") {
-				$dataToPipe[$targetProject->table_pk] = $newRecordName;
-			}
-			else {
-			    if ($destinationRecordID != "") {
-                    $dataToPipe[$targetProject->table_pk] = $destinationRecordID;
-                }
-                else {
-                    //$autoRecordID = $this->getAutoID($targetProjectID, $event_id);
-                    $autoRecordID = $this->framework->addAutoNumberedRecord($targetProjectID);
-                    $dataToPipe[$targetProject->table_pk] = $autoRecordID;
-                }
-			}
-			
-			if($debug){
-				$this->log("Saving data for pid $targetProjectID", [
-					'json-data' => json_encode($dataToPipe, JSON_PRETTY_PRINT)
-				]);
-			}
-
+			$dataToPipe = $this->translateRecordData($recordData,$sourceProject,$targetProject,$sourceFields,$recordToCheck,$event_id,$repeat_instance);
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
-            /*echo "Target Project: $targetProjectID, Table PK: ".$targetProject->table_pk.", Target Event: ".$targetProject->firstEventId.", Overwrite: ".$overwrite."<br/>";
-			echo "Data to pipe:<br/>";
-			echo "<pre>";
-			print_r($dataToPipe);
-			echo "</pre>";*/
-            $results = \Records::saveData($targetProjectID, 'array', [$dataToPipe[$targetProject->table_pk] => [$targetProject->firstEventId => $dataToPipe]],$overwrite);
-            //$results = \Records::saveData($targetProjectID, 'json', json_encode(array($dataToPipe[$targetProject->table_pk] => $dataToPipe)),$overwrite);
-
+            $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
             $errors = $results['errors'];
 
             if(!empty($errors)){
@@ -178,42 +261,17 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	}
 
 	function getSourceFields($project_id,$pipeSettings) {
-		$nonRepeatableFields = $this->getProjectFields($project_id);
+        $project = new \Project($project_id);
+        $allFields = array_keys($project->metadata);
 
 		$returnFields = array();
 		if (is_array($pipeSettings) && !empty($pipeSettings) && $pipeSettings[0] != "") {
-			$returnFields = array_intersect($nonRepeatableFields, $pipeSettings);
+			$returnFields = array_intersect($allFields, $pipeSettings);
 		}
 		else {
-			$returnFields = $nonRepeatableFields;
+			$returnFields = $allFields;
 		}
 		return $returnFields;
-	}
-
-	function getProjectFields($projectID) {
-		$fieldArray = array();
-		$sql = "
-			SELECT
-				m.field_name
-			FROM redcap_metadata m 
-			LEFT JOIN redcap_events_arms a 
-				ON a.project_id = m.project_id 
-			LEFT JOIN redcap_events_metadata e 
-				ON e.arm_id = a.arm_id 
-			LEFT JOIN redcap_events_repeat r 
-				ON r.event_id = e.event_id 
-				AND r.form_name = m.form_name 
-			WHERE
-				m.project_id=$projectID 
-				AND r.event_id IS NULL -- exclude repeatable fields since they aren't currently supported
-			ORDER BY field_order
-		";
-		//echo "$sql<br/>";
-		$result = $this->query($sql);
-		while ($row = db_fetch_assoc($result)) {
-			$fieldArray[] = $row['field_name'];
-		}
-		return $fieldArray;
 	}
 
 	function processFieldEnum($enum) {
@@ -225,82 +283,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		}
 		return $enumArray;
 	}
-
-	/*function getAutoId($projectId, $eventId = "") {
-		$inTransaction = false;
-		try {
-			@db_query("BEGIN");
-		}
-		catch (Exception $e) {
-			$inTransaction = true;
-		}
-
-		### Get a new Auto ID for the given project ###
-		$sql = "SELECT DISTINCT record
-			FROM redcap_data
-			WHERE project_id = $projectId
-				AND field_name = 'record_id'
-				AND value REGEXP '^[0-9]+$'
-			ORDER BY abs(record) DESC
-			LIMIT 1";
-
-		$newParticipantId = db_result($this->query($sql),0);
-		if ($newParticipantId == "") $newParticipantId = 0;
-		$newParticipantId++;
-
-		$sql = "INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES
-			({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
-
-		$this->query($sql);
-		@db_query("COMMIT");
-		$logSql = $sql;
-
-		# Verify the new auto ID hasn't been duplicated
-		$sql = "SELECT d.field_name
-			FROM redcap_data d
-			WHERE d.project_id = {$projectId}
-				AND d.record = '$newParticipantId'";
-
-		$result = $this->query($sql);
-
-		while(db_num_rows($result) > 1) {
-			# Delete, increment by a random integer and attempt to re-create the record
-			$sql = "DELETE FROM redcap_data
-				WHERE d.project_id = $projectId
-					AND d.record = '$newParticipantId'
-					AND d.field_name = 'record_id'
-				LIMIT 1";
-
-			$this->query($sql);
-
-			$newParticipantId += rand(1,10);
-
-			@db_query("BEGIN");
-
-			$sql = "INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES
-				({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
-			$logSql = $sql;
-
-			$this->query($sql);
-			@db_query("COMMIT");
-
-			$sql = "SELECT d.field_name
-				FROM redcap_data d
-				WHERE d.project_id = {$projectId}
-					AND d.record = '$newParticipantId'";
-
-			$result = $this->query($sql);
-		}
-
-		\Logging::logEvent($logSql, $projectId, "INSERT", "redcap_data", $newParticipantId,"record_id='$newParticipantId'","Create Record");
-		//logUpdate($logSql, $projectId, "INSERT", "redcap_data", $newParticipantId,"record_id='$newParticipantId'","Create Record");
-
-		if($inTransaction) {
-			@db_query("BEGIN");
-		}
-		// Return new auto id value
-		return $newParticipantId;
-	}*/
 
 	function redcap_module_system_enable($version) {
 		// A version of this module with the older settings format could have previously been enabled.
@@ -390,4 +372,192 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			}
 		}
 	}
+
+	function translateRecordData($sourceData, \Project $sourceProject, \Project $destProject, $fieldsToUse, $recordToUse, $eventToUse = "", $instanceToUse = "") {
+	    $eventMapping = array();
+	    $sourceEvents = $sourceProject->eventInfo;
+	    $destEvents = $destProject->eventInfo;
+        $destEventIDLeft = $destEvents;
+        $eventOffset = 0;
+        $sourceMeta = $sourceProject->metadata;
+        $destMeta = $destProject->metadata;
+        $destRecordField = $destProject->table_pk;
+        $destFields = array_keys($destMeta);
+
+        $destData = array();
+
+	    foreach ($sourceEvents as $eventID => $eventInfo) {
+	        if (count($destEvents) > 1) {
+	            foreach ($destEvents as $destID => $destEventInfo) {
+	                if ($eventInfo['name'] == $destEventInfo['name']) {
+	                    $eventMapping[$eventID] =  $destID;
+	                    unset($destEventIDLeft[$destID]);
+                    }
+                }
+            }
+	        elseif (($eventToUse != "" && $eventID == $eventToUse) || $eventToUse == "") {
+	            $destEventID = array_keys($destEvents)[0];
+
+	            if ($destEventID != "") {
+                    $eventMapping[$eventID] = $destEventID;
+                    unset($destEventIDLeft[$destEventID]);
+                    break;
+                }
+            }
+	        $eventOffset++;
+        }
+
+        $eventOffset = 0;
+	    foreach ($sourceEvents as $eventID => $eventInfo) {
+	        if (!isset($eventMapping[$eventID]) && count($destEventIDLeft) > 0) {
+	            $eventMapping[$eventID] = array_keys(array_slice($destEventIDLeft,$eventOffset,1,true))[0];
+                $eventOffset++;
+            }
+        }
+
+	    if (!empty($sourceData)) {
+	        foreach ($sourceData as $recordID => $recordData) {
+	            foreach ($recordData as $eventID => $eventData) {
+	                if ($eventID == "repeat_instances") {
+	                    foreach ($eventData as $subEventID => $subEventData) {
+	                        if (isset($eventMapping[$subEventID])) {
+                                $destEventID = $eventMapping[$subEventID];
+                                foreach ($subEventData as $instrument => $instrumentData) {
+                                    foreach ($instrumentData as $instance => $instanceData) {
+                                        if (($instanceToUse != "" && $instance == $instanceToUse) || $instanceToUse == "") {
+                                            foreach ($instanceData as $fieldName => $fieldValue) {
+                                                if ((in_array($fieldName,$fieldsToUse) || empty($fieldsToUse)) && in_array($fieldName,$destFields)) {
+                                                    if ($fieldName == $destRecordField && $fieldValue != "") $fieldValue = $recordToUse;
+                                                    $fieldInstrument = $sourceMeta[$fieldName]['form_name'];
+                                                    $instrumentRepeats = $sourceProject->isRepeatingForm($subEventID, $fieldInstrument);
+                                                    if (($instrument == $fieldInstrument && !$instrumentRepeats) || ($instrument != "" && $instrument != $fieldInstrument)) continue;
+                                                    $this->setDestinationData($destData, $sourceProject, $destProject, $fieldName, $fieldValue, $recordToUse, $destEventID, $instance);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+	                elseif (isset($eventMapping[$eventID])) {
+	                    //TODO Need to check if a field is on a repeating/non-repeating basis when looking here for a valid field value, it will be empty ALWAYS otherwise
+	                    $destEventID = $eventMapping[$eventID];
+                        
+	                    foreach ($eventData as $fieldName => $fieldValue) {
+	                        if ((in_array($fieldName,$fieldsToUse) || empty($fieldsToUse)) && in_array($fieldName,$destFields)) {
+                                if ($fieldName == $destRecordField && $fieldValue != "") $fieldValue = $recordToUse;
+                                $fieldInstrument = $sourceMeta[$fieldName]['form_name'];
+                                $instrumentRepeats = $sourceProject->isRepeatingForm($eventID, $fieldInstrument);
+                                if ($instrumentRepeats) continue;
+                                $this->setDestinationData($destData, $sourceProject, $destProject, $fieldName, $fieldValue, $recordToUse, $destEventID);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+	    return $destData;
+    }
+
+    function setDestinationData(&$destData, \Project $sourceProject, \Project $destProject, $srcFieldName, $srcFieldValue, $destRecord, $destEvent,$destRepeat = 1)
+    {
+        $destMeta = $destProject->metadata;
+        $destInstrument = $destMeta[$srcFieldName]['form_name'];
+        $destRecordField = $destProject->table_pk;
+        $srcMeta = $sourceProject->metadata;
+        $destInstrumentRepeats = $destProject->isRepeatingForm($destEvent, $destInstrument);
+        $destEventRepeats = $destProject->isRepeatingEvent($destEvent);
+
+        if ($destInstrumentRepeats) {
+            $destData[$destRecord][$destEvent][$destRecordField] = $destRecord;
+            $destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = $destInstrument;
+            $destData[$destRecord][$destEvent]['redcap_repeat_instance'] = $destRepeat;
+            $destData[$destRecord]['repeat_instances'][$destEvent][$destInstrument][$destRepeat][$srcFieldName] = $srcFieldValue;
+        } elseif ($destEventRepeats) {
+            $destData[$destRecord][$destEvent][$destRecordField] = $destRecord;
+            $destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = "";
+            $destData[$destRecord][$destEvent]['redcap_repeat_instance'] = $destRepeat;
+            $destData[$destRecord]['repeat_instances'][$destEvent][''][$destRepeat][$srcFieldName] = $srcFieldValue;
+        } else {
+            $destData[$destRecord][$destEvent][$srcFieldName] = $srcFieldValue;
+        }
+    }
+
+    function getAutoId($projectId,$eventId = "")
+    {
+        $inTransaction = false;
+        try {
+            @db_query("BEGIN");
+        }
+        catch (Exception $e) {
+            $inTransaction = true;
+        }
+
+        ### Get a new Auto ID for the given project ###
+        $sql = "SELECT DISTINCT record
+			FROM redcap_data
+			WHERE project_id = $projectId
+				AND field_name = 'record_id'
+				AND value REGEXP '^[0-9]+$'
+			ORDER BY abs(record) DESC
+			LIMIT 1";
+
+        $newParticipantId = db_result(db_query($sql),0);
+        if ($newParticipantId == "") $newParticipantId = 0;
+        $newParticipantId++;
+
+        $sql = "INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES
+			({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
+
+        db_query($sql);
+        @db_query("COMMIT");
+        $logSql = $sql;
+
+        # Verify the new auto ID hasn't been duplicated
+        $sql = "SELECT d.field_name
+			FROM redcap_data d
+			WHERE d.project_id = {$projectId}
+				AND d.record = '$newParticipantId'";
+
+        $result = db_query($sql);
+
+        while(db_num_rows($result) > 1) {
+            # Delete, increment by a random integer and attempt to re-create the record
+            $sql = "DELETE FROM redcap_data
+				WHERE d.project_id = $projectId
+					AND d.record = '$newParticipantId'
+					AND d.field_name = 'record_id'
+				LIMIT 1";
+
+            db_query($sql);
+
+            $newParticipantId += rand(1,10);
+
+            @db_query("BEGIN");
+
+            $sql = "INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES
+				({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
+            $logSql = $sql;
+
+            db_query($sql);
+            @db_query("COMMIT");
+
+            $sql = "SELECT d.field_name
+				FROM redcap_data d
+				WHERE d.project_id = {$projectId}
+					AND d.record = '$newParticipantId'";
+
+            $result = db_query($sql);
+        }
+
+        \Logging::logEvent($logSql, $projectId, "INSERT", "redcap_data", $newParticipantId,"record_id='$newParticipantId'","Create Record");
+        //logUpdate($logSql, $projectId, "INSERT", "redcap_data", $newParticipantId,"record_id='$newParticipantId'","Create Record");
+
+        if($inTransaction) {
+            @db_query("BEGIN");
+        }
+        // Return new auto id value
+        return $newParticipantId;
+    }
 }
