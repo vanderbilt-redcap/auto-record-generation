@@ -77,6 +77,16 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             $flagFieldName = $destinationProject['field_flag'];
             $flagFieldForm =
             $results = REDCap::getData($project_id, 'array', $record, $flagFieldName, $event_id);
+            /*$destData = REDCap::getData($destinationProject['destination_project'],'array',$record);
+            echo "Dest Data on ".$destinationProject['destination_project']." with $record<br/>";
+            echo "<pre>";
+            print_r($destData);
+            echo "</pre>";
+            $results = \Records::saveData($destinationProject['destination_project'], 'array', $destData,'overwrite');
+            echo "Dest save result:<br/>";
+            echo "<pre>";
+            print_r($results);
+            echo "</pre>";*/
 
             if (isset($results[$record]['repeat_instances'][$event_id][$instrument][$repeat_instance][$flagFieldName])) {
                 $triggerFieldValue = $results[$record]['repeat_instances'][$event_id][$instrument][$repeat_instance][$flagFieldName];
@@ -152,7 +162,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
             $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
             $errors = $results['errors'];
-
             if(!empty($errors)){
             	$errorString = stripslashes(json_encode($errors, JSON_PRETTY_PRINT));
             	$errorString = str_replace('""', '"', $errorString);
@@ -415,13 +424,13 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
         if ($destInstrumentRepeats) {
             $destData[$destRecord][$destEvent][$destRecordField] = $destRecord;
-            $destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = $destInstrument;
-            $destData[$destRecord][$destEvent]['redcap_repeat_instance'] = $destRepeat;
+            //$destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = "";
+            //$destData[$destRecord][$destEvent]['redcap_repeat_instance'] = $destRepeat;
             $destData[$destRecord]['repeat_instances'][$destEvent][$destInstrument][$destRepeat][$srcFieldName] = $srcFieldValue;
         } elseif ($destEventRepeats) {
             $destData[$destRecord][$destEvent][$destRecordField] = $destRecord;
-            $destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = "";
-            $destData[$destRecord][$destEvent]['redcap_repeat_instance'] = $destRepeat;
+            //$destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = "";
+            //$destData[$destRecord][$destEvent]['redcap_repeat_instance'] = $destRepeat;
             $destData[$destRecord]['repeat_instances'][$destEvent][''][$destRepeat][$srcFieldName] = $srcFieldValue;
         } else {
             $destData[$destRecord][$destEvent][$srcFieldName] = $srcFieldValue;
