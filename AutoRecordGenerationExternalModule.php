@@ -160,8 +160,16 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 			$dataToPipe = $this->translateRecordData($recordData,$sourceProject,$targetProject,$sourceFields,$recordToCheck,$event_id,$repeat_instance);
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
+            /*echo "Data to pipe:<br/>";
+            echo "<pre>";
+            print_r($dataToPipe);
+            echo "</pre>";*/
             $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
             $errors = $results['errors'];
+            /*echo "Result:<br/>";
+            echo "<pre>";
+            print_r($results);
+            echo "</pre>";*/
             if(!empty($errors)){
             	$errorString = stripslashes(json_encode($errors, JSON_PRETTY_PRINT));
             	$errorString = str_replace('""', '"', $errorString);
@@ -379,6 +387,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                                     foreach ($instrumentData as $instance => $instanceData) {
                                         if (($instanceToUse != "" && $instance == $instanceToUse) || $instanceToUse == "") {
                                             foreach ($instanceData as $fieldName => $fieldValue) {
+                                                if ($fieldValue == "") continue;
                                                 if ((in_array($fieldName,$fieldsToUse) || empty($fieldsToUse)) && in_array($fieldName,$destFields)) {
                                                     if ($fieldName == $destRecordField && $fieldValue != "") $fieldValue = $recordToUse;
                                                     $fieldInstrument = $sourceMeta[$fieldName]['form_name'];
@@ -399,6 +408,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                         
 	                    foreach ($eventData as $fieldName => $fieldValue) {
 	                        if ((in_array($fieldName,$fieldsToUse) || empty($fieldsToUse)) && in_array($fieldName,$destFields)) {
+	                            if ($fieldValue == "") continue;
                                 if ($fieldName == $destRecordField && $fieldValue != "") $fieldValue = $recordToUse;
                                 $fieldInstrument = $sourceMeta[$fieldName]['form_name'];
                                 $instrumentRepeats = $sourceProject->isRepeatingForm($eventID, $fieldInstrument);
@@ -422,18 +432,20 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $destInstrumentRepeats = $destProject->isRepeatingForm($destEvent, $destInstrument);
         $destEventRepeats = $destProject->isRepeatingEvent($destEvent);
 
-        if ($destInstrumentRepeats) {
-            $destData[$destRecord][$destEvent][$destRecordField] = $destRecord;
-            //$destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = "";
-            //$destData[$destRecord][$destEvent]['redcap_repeat_instance'] = $destRepeat;
-            $destData[$destRecord]['repeat_instances'][$destEvent][$destInstrument][$destRepeat][$srcFieldName] = $srcFieldValue;
-        } elseif ($destEventRepeats) {
-            $destData[$destRecord][$destEvent][$destRecordField] = $destRecord;
-            //$destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = "";
-            //$destData[$destRecord][$destEvent]['redcap_repeat_instance'] = $destRepeat;
-            $destData[$destRecord]['repeat_instances'][$destEvent][''][$destRepeat][$srcFieldName] = $srcFieldValue;
-        } else {
-            $destData[$destRecord][$destEvent][$srcFieldName] = $srcFieldValue;
+        if ($srcMeta[$srcFieldName]['element_type'] == $destMeta[$srcFieldName]['element_type'] && $srcMeta[$srcFieldName]['element_enum'] == $destMeta[$srcFieldName]['element_enum']) {
+            if ($destInstrumentRepeats) {
+                $destData[$destRecord][$destEvent][$destRecordField] = $destRecord;
+                //$destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = "";
+                //$destData[$destRecord][$destEvent]['redcap_repeat_instance'] = $destRepeat;
+                $destData[$destRecord]['repeat_instances'][$destEvent][$destInstrument][$destRepeat][$srcFieldName] = $srcFieldValue;
+            } elseif ($destEventRepeats) {
+                $destData[$destRecord][$destEvent][$destRecordField] = $destRecord;
+                //$destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = "";
+                //$destData[$destRecord][$destEvent]['redcap_repeat_instance'] = $destRepeat;
+                $destData[$destRecord]['repeat_instances'][$destEvent][''][$destRepeat][$srcFieldName] = $srcFieldValue;
+            } else {
+                $destData[$destRecord][$destEvent][$srcFieldName] = $srcFieldValue;
+            }
         }
     }
 
