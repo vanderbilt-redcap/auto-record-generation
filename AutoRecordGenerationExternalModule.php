@@ -91,7 +91,23 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			$dataToPipe = array();
 
 			foreach ($targetFields as $targetField) {
-				if (in_array($targetField,$sourceFields) && $targetProject->metadata[$targetField]['element_type'] != 'descriptive' && $targetProject->metadata[$targetField]['element_enum'] == $sourceProject->metadata[$targetField]['element_enum']) {
+				if (in_array($targetField,$sourceFields) && $targetProject->metadata[$targetField]['element_type'] != 'descriptive') {
+					## On SQL fields, don't check the element enum
+					## Also, if target project doesn't have enum, don't bother checking enum
+					if($targetProject->metadata[$targetField]['element_type'] != "sql"
+							&& $sourceProject->metadata[$targetField]['element_type'] != "sql"
+							&& $targetProject->metadata[$targetField]['element_enum'] != "") {
+						$targetEnum = $this->processFieldEnum($targetProject->metadata[$targetField]['element_enum']);
+						$sourceEnum = $this->processFieldEnum($sourceProject->metadata[$targetField]['element_enum']);
+
+						## Make sure that the raw values match between projects
+						## checking full enum results in weird issues where extra spaces randomly broke piping
+						## even when the enum looked identical in editor
+						if(array_keys($sourceEnum) !== array_keys($targetEnum)) {
+							continue;
+						}
+					}
+
 					$dataToPipe[$targetField] = $recordData[$record][$event_id][$targetField];
 				}
 			}
