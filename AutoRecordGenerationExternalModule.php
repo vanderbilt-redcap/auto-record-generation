@@ -20,7 +20,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
 		$this->copyValuesToDestinationProjects($record, $event_id, $instrument, $repeat_instance);
-		exit;
 	}
 
 	function getNewRecordName(\Project $project, $recordData,$recordSetting,$event_id,$repeat_instance = 1) {
@@ -105,7 +104,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             else{
                 $triggerFieldSet = $triggerFieldValue != "";
             }
-            echo "Trigger? ".($triggerFieldSet ? "True" : "False")."<br/>";
             if ($triggerFieldSet) {
                 $this->handleDestinationProject($record, $event_id, $destinationProject, $repeat_instance);
             }
@@ -162,16 +160,16 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 			$dataToPipe = $this->translateRecordData($recordData,$sourceProject,$targetProject,$sourceFields,$recordToCheck,$event_id,$repeat_instance);
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
-            echo "Data to pipe:<br/>";
+            /*echo "Data to pipe:<br/>";
             echo "<pre>";
             print_r($dataToPipe);
-            echo "</pre>";
+            echo "</pre>";*/
             $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
             $errors = $results['errors'];
-            echo "Result:<br/>";
+            /*echo "Result:<br/>";
             echo "<pre>";
             print_r($results);
-            echo "</pre>";
+            echo "</pre>";*/
             if(!empty($errors)){
             	$errorString = stripslashes(json_encode($errors, JSON_PRETTY_PRINT));
             	$errorString = str_replace('""', '"', $errorString);
