@@ -20,6 +20,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
 		$this->copyValuesToDestinationProjects($record, $event_id, $instrument, $repeat_instance);
+		exit;
 	}
 
 	function getNewRecordName(\Project $project, $recordData,$recordSetting,$event_id,$repeat_instance = 1) {
@@ -104,6 +105,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             else{
                 $triggerFieldSet = $triggerFieldValue != "";
             }
+            echo "Trigger? ".($triggerFieldSet ? "True" : "False")."<br/>";
             if ($triggerFieldSet) {
                 $this->handleDestinationProject($record, $event_id, $destinationProject, $repeat_instance);
             }
@@ -160,16 +162,16 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 			$dataToPipe = $this->translateRecordData($recordData,$sourceProject,$targetProject,$sourceFields,$recordToCheck,$event_id,$repeat_instance);
 			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
-            /*echo "Data to pipe:<br/>";
+            echo "Data to pipe:<br/>";
             echo "<pre>";
             print_r($dataToPipe);
-            echo "</pre>";*/
+            echo "</pre>";
             $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
             $errors = $results['errors'];
-            /*echo "Result:<br/>";
+            echo "Result:<br/>";
             echo "<pre>";
             print_r($results);
-            echo "</pre>";*/
+            echo "</pre>";
             if(!empty($errors)){
             	$errorString = stripslashes(json_encode($errors, JSON_PRETTY_PRINT));
             	$errorString = str_replace('""', '"', $errorString);
@@ -426,13 +428,15 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
     function setDestinationData(&$destData, \Project $sourceProject, \Project $destProject, $srcFieldName, $srcFieldValue, $destRecord, $destEvent,$destRepeat = 1)
     {
         $destMeta = $destProject->metadata;
+        $destEventForms = $destProject->eventsForms[$destEvent];
+
         $destInstrument = $destMeta[$srcFieldName]['form_name'];
         $destRecordField = $destProject->table_pk;
         $srcMeta = $sourceProject->metadata;
         $destInstrumentRepeats = $destProject->isRepeatingForm($destEvent, $destInstrument);
         $destEventRepeats = $destProject->isRepeatingEvent($destEvent);
 
-        if ($srcMeta[$srcFieldName]['element_type'] == $destMeta[$srcFieldName]['element_type'] && $srcMeta[$srcFieldName]['element_enum'] == $destMeta[$srcFieldName]['element_enum']) {
+        if (in_array($destInstrument,$destEventForms) && $srcMeta[$srcFieldName]['element_type'] == $destMeta[$srcFieldName]['element_type'] && $srcMeta[$srcFieldName]['element_enum'] == $destMeta[$srcFieldName]['element_enum']) {
             if ($destInstrumentRepeats) {
                 $destData[$destRecord][$destEvent][$destRecordField] = $destRecord;
                 //$destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = "";
