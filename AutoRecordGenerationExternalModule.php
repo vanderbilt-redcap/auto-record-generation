@@ -25,7 +25,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	function getNewRecordName(\Project $project, $recordData,$recordSetting,$event_id,$repeat_instance = 1) {
         $newRecordID = "";
         if ($recordSetting == "") {
-            $newRecordID = $this->getAutoId($project->project_id,$project->firstEventId);
+            $newRecordID = \DataEntry::getAutoId($project->project_id);
         }
         else {
             $validRecordData = array();
@@ -130,10 +130,9 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $recordData = \Records::getData($project_id,'array',$record);
 
         $uniqueEventName = $sourceProject->getUniqueEventNames()[$event_id];
-        $newRecordName = $this->getNewRecordName($sourceProject,$recordData,$destinationProject["new_record"],$event_id,$repeat_instance);
 
         $destRecordExists = false;
-        $recordToCheck = ($destinationRecordID != "" ? $destinationRecordID : $this->getNewRecordName($sourceProject,$recordData,$destinationProject["new_record"],$event_id,$repeat_instance));
+        $recordToCheck = ($destinationRecordID != "" ? $destinationRecordID : $this->getNewRecordName($targetProject,$recordData,$destinationProject["new_record"],$event_id,$repeat_instance));
         if ($recordToCheck != "") {
             $targetRecordSql = "SELECT record FROM redcap_data WHERE project_id='$targetProjectID' && record='$recordToCheck' LIMIT 1";
             $result = db_query($targetRecordSql);
@@ -451,7 +450,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         }
     }
 
-    function getAutoId($projectId,$eventId = "")
+    /*function getAutoId($projectId,$eventId = "")
     {
         $inTransaction = false;
         try {
@@ -526,5 +525,5 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         }
         // Return new auto id value
         return $newParticipantId;
-    }
+    }*/
 }
