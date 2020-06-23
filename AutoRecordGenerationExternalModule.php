@@ -22,10 +22,18 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		$this->copyValuesToDestinationProjects($record, $event_id, $instrument, $repeat_instance);
 	}
 
-	function getNewRecordName(\Project $project, $recordData,$recordSetting,$event_id,$repeat_instance = 1) {
+	function getNewRecordName(\Project $project, $recordData,$recordSetting,$srcProjectID,$event_id,$repeat_instance = 1) {
         $newRecordID = "";
         if ($recordSetting == "") {
-            $newRecordID = \DataEntry::getAutoId($project->project_id);
+            $destinationRecordID = "";
+            $queryLogs = $this->queryLogs("SELECT message, record WHERE message='Auto record for ".array_keys($recordData)[0]."' AND project_id=".$srcProjectID);
+
+            while ($row = db_fetch_assoc($queryLogs)) {
+                if ($row['record'] != "") {
+                    $destinationRecordID = $row['record'];
+                }
+            }
+            $newRecordID = ($destinationRecordID != "" ? $destinationRecordID : \DataEntry::getAutoId($project->project_id));
         }
         else {
             $validRecordData = array();
@@ -115,24 +123,17 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 		$targetProjectID = $destinationProject['destination_project'];
         $overwrite = ($destinationProject['overwrite-record'] == "overwrite" ? $destinationProject['overwrite-record'] : "normal");
-        $queryLogs = $this->queryLogs("SELECT message, record WHERE message='Auto record for $record' AND project_id=$project_id");
         $targetProject = new \Project($targetProjectID);
         $sourceProject = new \Project($project_id);
         $debug = $destinationProject['enable_debug_logging'];
-
-        $destinationRecordID = "";
-        while ($row = db_fetch_assoc($queryLogs)) {;
-            if ($row['record'] != "") {
-                $destinationRecordID = $row['record'];
-            }
-        }
 
         $recordData = \Records::getData($project_id,'array',$record);
 
         $uniqueEventName = $sourceProject->getUniqueEventNames()[$event_id];
 
         $destRecordExists = false;
-        $recordToCheck = ($destinationRecordID != "" ? $destinationRecordID : $this->getNewRecordName($targetProject,$recordData,$destinationProject["new_record"],$event_id,$repeat_instance));
+
+        $recordToCheck = $this->getNewRecordName($targetProject,$recordData,$destinationProject["new_record"],$project_id,$event_id,$repeat_instance);
         if ($recordToCheck != "") {
             $targetRecordSql = "SELECT record FROM redcap_data WHERE project_id='$targetProjectID' && record='$recordToCheck' LIMIT 1";
             $result = db_query($targetRecordSql);
@@ -152,7 +153,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			]);
 		}
 
-		if ($targetProjectID != "" && is_numeric($targetProjectID) && (($destinationRecordID == "" && $overwrite == "normal") || $overwrite == "overwrite" || !$destRecordExists)) {
+		if ($targetProjectID != "" && is_numeric($targetProjectID) && ((!$destRecordExists && $overwrite == "normal") || $overwrite == "overwrite")) {
 			$sourceFields = $this->getSourceFields($project_id,$destinationProject['pipe_fields']);
 			//$recordData = \Records::getData($project_id,'array',array($record),$targetFields);
 			$dataToPipe = array();
