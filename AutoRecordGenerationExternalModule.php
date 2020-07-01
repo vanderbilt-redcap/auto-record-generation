@@ -14,7 +14,16 @@ use REDCap;
 
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
+	const RECORD_CREATED_BY_MODULE = "auto_record_module_saved";
+
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
+		## Prevent hook from being called multiple times on each project/record pair
+		if(constant(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record) == 1) {
+			return;
+		}
+
+		define(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record,1);
+
 		$this->copyValuesToDestinationProjects($record, $event_id);
 	}
 
@@ -154,6 +163,26 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             	if(!empty($errorEmail)){
             		mail($errorEmail, $this->getModuleName() . " Module Error", $message);
             	}
+            } else {
+            	## Call the save record hook on the new record
+            	# Cache get params to reset later
+            	$oldId = $_GET['id'];
+            	$oldPid = $_GET['pid'];
+
+				## Set the $_GET parameter to avoid errors / source project being affected
+				$_GET['pid'] = $targetProjectID;
+				$_GET['id'] = $dataToPipe[$targetProject->table_pk];
+
+				## Prevent module errors from crashing the whole import process
+				try {
+					ExternalModules::callHook("redcap_save_record",[$_GET['pid'],$_GET['id'],NULL,$targetProject->firstEventId,NULL,NULL,NULL]);
+				}
+				catch(\Exception $e) {
+					error_log("External Module Error - Project: ".$_GET['pid']." - Record: ".$_GET['id'].": ".$e->getMessage());
+				}
+
+				$_GET['id'] = $oldId;
+				$_GET['pid'] = $oldPid;
             }
 
 			if ($destinationRecordID == "") {
