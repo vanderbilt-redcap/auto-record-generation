@@ -164,6 +164,13 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             echo "<pre>";
             print_r($dataToPipe);
             echo "</pre>";*/
+            if ($project_id == "111562") {
+                echo "Data to pipe:<br/>";
+                echo "<pre>";
+                print_r($dataToPipe);
+                echo "</pre>";
+                $this->exitAfterHook();
+            }
             $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
             $errors = $results['errors'];
             /*echo "Result:<br/>";
