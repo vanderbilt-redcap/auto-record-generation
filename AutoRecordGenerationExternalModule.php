@@ -34,6 +34,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 }
             }
             $newRecordID = ($destinationRecordID != "" ? $destinationRecordID : \DataEntry::getAutoId($project->project_id));
+            echo "New record after logs is $newRecordID<br/>";
         }
         else {
             $validRecordData = array();
@@ -73,6 +74,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 }
             }
             $newRecordID = $this->parseRecordSetting($recordSetting,$validRecordData);
+            echo "New record after parse is $newRecordID<br/>";
         }
         return $newRecordID;
     }
