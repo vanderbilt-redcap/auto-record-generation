@@ -34,7 +34,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 }
             }
             $newRecordID = ($destinationRecordID != "" ? $destinationRecordID : \DataEntry::getAutoId($project->project_id));
-            echo "New record after logs is $newRecordID<br/>";
         }
         else {
             $validRecordData = array();
@@ -74,7 +73,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 }
             }
             $newRecordID = $this->parseRecordSetting($recordSetting,$validRecordData);
-            echo "New record after parse is $newRecordID<br/>";
         }
         return $newRecordID;
     }
@@ -166,13 +164,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             echo "<pre>";
             print_r($dataToPipe);
             echo "</pre>";*/
-            if ($project_id == "111562") {
-                echo "Data to pipe:<br/>";
-                echo "<pre>";
-                print_r($dataToPipe);
-                echo "</pre>";
-                $this->exitAfterHook();
-            }
             $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
             $errors = $results['errors'];
             /*echo "Result:<br/>";
@@ -220,10 +211,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	}
 
 	function parseRecordSetting($recordsetting,$recorddata) {
-        echo "Record setting: $recordsetting<br/>";
-        echo "<pre>";
-        print_r($recorddata);
-        echo "</pre>";
 		$returnString = $recordsetting;
 		preg_match_all("/\[(.*?)\]/",$recordsetting,$matchRegEx);
 		$stringsToReplace = $matchRegEx[0];
