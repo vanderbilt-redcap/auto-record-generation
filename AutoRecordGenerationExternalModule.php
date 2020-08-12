@@ -220,6 +220,10 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	}
 
 	function parseRecordSetting($recordsetting,$recorddata) {
+        echo "Record setting: $recordsetting<br/>";
+        echo "<pre>";
+        print_r($recorddata);
+        echo "</pre>";
 		$returnString = $recordsetting;
 		preg_match_all("/\[(.*?)\]/",$recordsetting,$matchRegEx);
 		$stringsToReplace = $matchRegEx[0];
