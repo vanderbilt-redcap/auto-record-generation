@@ -16,6 +16,12 @@ use REDCap;
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
+        if (in_array($project_id,array(103538,102495,106458,102710,111557,111562,116774,116805,116831))) {
+            $remove = $this->removeLogs("DELETE WHERE message LIKE 'Auto record for%'");
+            echo "<pre>";
+            print_r($remove);
+            echo "</pre>";
+        }
     }
 
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
@@ -24,13 +30,14 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 	function getNewRecordName(\Project $project, $recordData,$recordSetting,$srcProjectID,$event_id,$repeat_instance = 1) {
         $newRecordID = "";
+
         if ($recordSetting == "") {
             $destinationRecordID = "";
-            $queryLogs = $this->queryLogs("SELECT message, record WHERE message='Auto record for ".array_keys($recordData)[0]."' AND project_id=".$srcProjectID);
+            $queryLogs = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for ".array_keys($recordData)[0]."'");
 
             while ($row = db_fetch_assoc($queryLogs)) {
-                if ($row['record'] != "") {
-                    $destinationRecordID = $row['record'];
+                if ($row['destination_record_id'] != "") {
+                    $destinationRecordID = $row['destination_record_id'];
                 }
             }
             $newRecordID = ($destinationRecordID != "" ? $destinationRecordID : \DataEntry::getAutoId($project->project_id));
@@ -95,6 +102,9 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             echo "<pre>";
             print_r($results);
             echo "</pre>";*/
+            /*echo "<pre>";
+            print_r($results);
+            echo "</pre>";*/
 
             if (isset($results[$record]['repeat_instances'][$event_id][$instrument][$repeat_instance][$flagFieldName])) {
                 $triggerFieldValue = $results[$record]['repeat_instances'][$event_id][$instrument][$repeat_instance][$flagFieldName];
@@ -112,10 +122,12 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             else{
                 $triggerFieldSet = $triggerFieldValue != "";
             }
+            echo "Trigger field set: ".($triggerFieldSet ? "True" : "False")."<br/>";
             if ($triggerFieldSet) {
                 $this->handleDestinationProject($record, $event_id, $destinationProject, $repeat_instance);
             }
 		}
+		$this->exitAfterHook();
 	}
 
 	private function handleDestinationProject($record, $event_id, $destinationProject, $repeat_instance = 1) {
@@ -134,6 +146,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $destRecordExists = false;
 
         $recordToCheck = $this->getNewRecordName($targetProject,$recordData,$destinationProject["new_record"],$project_id,$event_id,$repeat_instance);
+        //echo "Record to check $recordToCheck<br/>";
         if ($recordToCheck != "") {
             $targetRecordSql = "SELECT record FROM redcap_data WHERE project_id='$targetProjectID' && record='$recordToCheck' LIMIT 1";
             $result = db_query($targetRecordSql);
@@ -159,43 +172,59 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			$dataToPipe = array();
 
 			$dataToPipe = $this->translateRecordData($recordData,$sourceProject,$targetProject,$sourceFields,$recordToCheck,$event_id,$repeat_instance);
-			//$this->saveData($targetProjectID,$dataToPipe[$targetProject->table_pk],$targetProject->firstEventId,$dataToPipe);
-            /*echo "Data to pipe:<br/>";
+
+            /*echo "Data for ".$targetProject->table_pk."<br/>";
             echo "<pre>";
             print_r($dataToPipe);
             echo "</pre>";*/
-            $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
-            $errors = $results['errors'];
-            /*echo "Result:<br/>";
-            echo "<pre>";
-            print_r($results);
-            echo "</pre>";*/
-            if(!empty($errors)){
-            	$errorString = stripslashes(json_encode($errors, JSON_PRETTY_PRINT));
-            	$errorString = str_replace('""', '"', $errorString);
+			if ($recordToCheck != "") {
+                $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
+                $errors = $results['errors'];
+                /*echo "Result:<br/>";
+                echo "<pre>";
+                print_r($results);
+                echo "</pre>";*/
+                if(!empty($errors)){
+                    $errorString = stripslashes(json_encode($errors, JSON_PRETTY_PRINT));
+                    $errorString = str_replace('""', '"', $errorString);
 
-            	$message = "The " . $this->getModuleName() . " module could not copy values for record " . $dataToPipe[$targetProject->table_pk] . " from project $project_id to project $targetProjectID because of the following error(s):\n\n$errorString";
-            	error_log($message);
+                    $message = "The " . $this->getModuleName() . " module could not copy values for record " . $recordToCheck . " from project $project_id to project $targetProjectID because of the following error(s):\n\n$errorString";
+                    error_log($message);
 
-            	$errorEmail = $this->getProjectSetting('error_email');
-            	if ($errorEmail == "") $errorEmail = "james.r.moore@vumc.org";
-            	if(!empty($errorEmail)){
-                    ## Add check for universal from email address
-                    global $from_email;
-                    if($from_email != '') {
-                        $headers = "From: ".$from_email."\r\n";
+                    $errorEmail = $this->getProjectSetting('error_email');
+                    if ($errorEmail == "") $errorEmail = "james.r.moore@vumc.org";
+                    if(!empty($errorEmail)){
+                        ## Add check for universal from email address
+                        global $from_email;
+                        if($from_email != '') {
+                            $headers = "From: ".$from_email."\r\n";
+                        }
+                        else {
+                            $headers = null;
+                        }
+                        mail($errorEmail, $this->getModuleName() . " Module Error", $message, $headers);
                     }
-                    else {
-                        $headers = null;
-                    }
-                    mail($errorEmail, $this->getModuleName() . " Module Error", $message, $headers);
-            	}
-            }
+                }
+                else {
+                    if ($destinationProject["new_record"] == "") {
+                        $newRecord = true;
+                        $queryLogs = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for " . array_keys($recordData)[0] . "'");
 
-			if ($destinationRecordID == "") {
-                $this->log("Auto record for " . $record, array("destination_record_id" => $dataToPipe[$targetProject->table_pk]));
+                        while ($row = db_fetch_assoc($queryLogs)) {
+                            if ($row['destination_record_id'] != "") {
+                                $newRecord = false;
+                            }
+                        }
+
+                        if ($newRecord) {
+                            $logID = $this->log("Auto record for " . $record, ["destination_record_id" => $recordToCheck]);
+                            //echo "Log ID: $logID for " . $recordToCheck . "<br/>";
+                        }
+                    }
+                }
             }
 		}
+		$this->exitAfterHook();
 	}
 
 	private function getFieldType($fieldName) {
@@ -405,7 +434,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 	                elseif (isset($eventMapping[$eventID])) {
 	                    //TODO Need to check if a field is on a repeating/non-repeating basis when looking here for a valid field value, it will be empty ALWAYS otherwise
 	                    $destEventID = $eventMapping[$eventID];
-                        
+
 	                    foreach ($eventData as $fieldName => $fieldValue) {
 	                        if ((in_array($fieldName,$fieldsToUse) || empty($fieldsToUse)) && in_array($fieldName,$destFields)) {
 	                            if ($fieldValue == "") continue;
