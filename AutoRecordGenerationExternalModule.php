@@ -16,12 +16,14 @@ use REDCap;
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
-        if (in_array($project_id,array(103538,102495,106458,102710,111557,111562,116774,116805,116831))) {
+        //The below code was necessary for resetting module settings for a project so it could be reset with all new records.
+
+        /*if (in_array($project_id,array(103538,102495,106458,102710,111557,111562,116774,116805,116831))) {
             $remove = $this->removeLogs("DELETE WHERE message LIKE 'Auto record for%'");
             echo "<pre>";
             print_r($remove);
             echo "</pre>";
-        }
+        }*/
     }
 
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
