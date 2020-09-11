@@ -26,7 +26,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         }*/
 
         //This code is for switching up where a record goes to fix old, invalid log mapping
-        $recordChange = array(
+        /*$recordChange = array(
             287=>1104,
             297=>1112,
             365=>1148,
@@ -39,7 +39,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         if (in_array($record,array_keys($recordChange)) && $project_id == "110730") {
             $this->removeLogs("DELETE WHERE message = 'Auto record for $record' AND project_id=$project_id");
             $logID = $this->log("Auto record for " . $record, ["destination_record_id" => $recordChange[$record]]);
-        }
+        }*/
     }
 
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
