@@ -34,7 +34,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             467=>1190,
             479=>1198,
             503=>1224,
-            552=>1126
+            552=>1226
         );
         if (in_array($record,array_keys($recordChange)) && $project_id == "110730") {
             $this->removeLogs("DELETE WHERE message = 'Auto record for $record' AND project_id=$project_id");
