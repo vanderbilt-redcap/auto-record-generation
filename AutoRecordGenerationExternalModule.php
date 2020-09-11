@@ -50,6 +50,9 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 if ($row['destination_record_id'] != "") {
                     $destinationRecordID = $row['destination_record_id'];
                 }
+                elseif ($row['record'] != "") {
+                    $destinationRecordID = $row['record'];
+                }
             }
             $newRecordID = ($destinationRecordID != "" ? $destinationRecordID : \DataEntry::getAutoId($project->project_id));
         }
