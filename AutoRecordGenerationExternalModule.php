@@ -24,6 +24,23 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             print_r($remove);
             echo "</pre>";
         }*/
+
+        //This code is for switching up where a record goes to fix old, invalid log mapping
+        /*$recordChange = array(
+            287=>1104,
+            297=>1112,
+            365=>1148,
+            434=>1179,
+            467=>1190,
+            479=>1198,
+            503=>1224,
+            552=>1126
+        );*/
+        /*$recordChange = array(1=>10000,2=>20000);
+        if (in_array($record,array_keys($recordChange))) {
+            $this->removeLogs("DELETE WHERE message = 'Auto record for $record'");
+            $logID = $this->log("Auto record for " . $record, ["destination_record_id" => $recordChange[$record]]);
+        }*/
     }
 
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
@@ -124,12 +141,12 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             else{
                 $triggerFieldSet = $triggerFieldValue != "";
             }
-            echo "Trigger field set: ".($triggerFieldSet ? "True" : "False")."<br/>";
+            //echo "Trigger field set: ".($triggerFieldSet ? "True" : "False")."<br/>";
             if ($triggerFieldSet) {
                 $this->handleDestinationProject($record, $event_id, $destinationProject, $repeat_instance);
             }
 		}
-		$this->exitAfterHook();
+		//$this->exitAfterHook();
 	}
 
 	private function handleDestinationProject($record, $event_id, $destinationProject, $repeat_instance = 1) {
@@ -226,7 +243,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 }
             }
 		}
-		$this->exitAfterHook();
+		//$this->exitAfterHook();
 	}
 
 	private function getFieldType($fieldName) {
