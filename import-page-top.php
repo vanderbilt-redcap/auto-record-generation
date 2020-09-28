@@ -79,7 +79,7 @@
 		}
 
 		module.displayAndThrowError = function(error){
-			var error = 'The <?=$this->getModuleName()?> module is not able to run on import. No records will be generated due to this data import.'
+			var error = 'The <?=$this->getModuleName()?> module is not able to run on import.  Please report this issue.  ' + error
 			alert(error)
 			throw error // throw the error to prevent further code from executing
 		}
