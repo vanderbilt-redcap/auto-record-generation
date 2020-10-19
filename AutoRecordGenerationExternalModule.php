@@ -16,10 +16,19 @@ use REDCap;
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
+        $results = json_decode(REDCap::getData($project_id, 'json', $record, array(), $event_id),true);
+        $currentProject = new \Project($project_id);
+        echo "<pre>";
+        print_r($results);
+        echo "</pre>";
+        echo "<pre>";
+        print_r($currentProject->uniqueEventNames);
+        echo "</pre>";
+        echo "Event name: ".$currentProject->uniqueEventNames[$event_id]."<br/>";
     }
 
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
-		$this->copyValuesToDestinationProjects($record, $event_id, $instrument, $repeat_instance);
+		$this->copyValuesToDestinationProjects($record, $event_id, $repeat_instance);
 	}
 
 	function getNewRecordName(\Project $project, $recordData,$recordSetting,$srcProjectID,$event_id,$repeat_instance = 1) {
@@ -77,14 +86,22 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         return $newRecordID;
     }
 
-	function copyValuesToDestinationProjects($record, $event_id, $instrument, $repeat_instance = 1) {
+	function copyValuesToDestinationProjects($record, $event_id, $repeat_instance = 1) {
 		$destinationProjects = $this->framework->getSubSettings('destination_projects');
 
         $project_id = $this->getProjectId();
+        $currentProject = new \Project($project_id);
+        $eventName = $currentProject->uniqueEventNames[$event_id];
+
 		foreach ($destinationProjects as $destinationProject) {
             $flagFieldName = $destinationProject['field_flag'];
-            $flagFieldForm =
-            $results = REDCap::getData($project_id, 'array', $record, $flagFieldName, $event_id);
+            $results = json_decode(REDCap::getData($project_id, 'json', $record, $flagFieldName, $event_id),true);
+
+            foreach ($results as $indexData) {
+                if ((!isset($indexData['redcap_event_name']) || $indexData['redcap_event_name'] == $eventName) && $indexData[$flagFieldName] != "") {
+                    $triggerFieldValue = $indexData[$flagFieldName];
+                }
+            }
             /*$destData = REDCap::getData($destinationProject['destination_project'],'array',$record);
             echo "Dest Data on ".$destinationProject['destination_project']." with $record<br/>";
             echo "<pre>";
@@ -95,8 +112,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             echo "<pre>";
             print_r($results);
             echo "</pre>";*/
-
-            if (isset($results[$record]['repeat_instances'][$event_id][$instrument][$repeat_instance][$flagFieldName])) {
+            /*if (isset($results[$record]['repeat_instances'][$event_id][$instrument][$repeat_instance][$flagFieldName])) {
                 $triggerFieldValue = $results[$record]['repeat_instances'][$event_id][$instrument][$repeat_instance][$flagFieldName];
             }
             elseif (isset($results[$record]['repeat_instances'][$event_id][''][$repeat_instance][$flagFieldName])) {
@@ -104,7 +120,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
             else {
                 $triggerFieldValue = $results[$record][$event_id][$flagFieldName];
-            }
+            }*/
             $triggerFieldType = $this->getFieldType($flagFieldName);
             if(in_array($triggerFieldType, ['yesno', 'truefalse'])){
                 $triggerFieldSet = $triggerFieldValue === "1";
@@ -164,6 +180,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             echo "<pre>";
             print_r($dataToPipe);
             echo "</pre>";*/
+
             $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
             $errors = $results['errors'];
             /*echo "Result:<br/>";
