@@ -110,6 +110,8 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             $flagFieldName = $destinationProject['field_flag'];
             $results = json_decode(REDCap::getData($project_id, 'json', $record, $flagFieldName, $event_id),true);
 
+            ## Need to set default value as $flagFieldName may not exist
+            $triggerFieldValue = "";
             foreach ($results as $indexData) {
                 if ((!isset($indexData['redcap_event_name']) || $indexData['redcap_event_name'] == $eventName) && $indexData[$flagFieldName] != "") {
                     $triggerFieldValue = $indexData[$flagFieldName];
