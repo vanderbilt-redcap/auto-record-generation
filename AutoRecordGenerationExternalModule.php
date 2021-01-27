@@ -168,13 +168,11 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $destRecordExists = false;
 
         $recordToCheck = $this->getNewRecordName($targetProject,$recordData,$destinationProject["new_record"],$project_id,$event_id,$repeat_instance);
-        echo "Record to check $recordToCheck<br/>";
+
         if ($recordToCheck != "") {
             $targetRecordSql = "SELECT record FROM redcap_data WHERE project_id='$targetProjectID' && record='$recordToCheck' LIMIT 1";
             $result = db_query($targetRecordSql);
-            echo "<pre>";
-            print_r($result);
-            echo "</pre>";
+
             while ($row = db_fetch_assoc($result)) {
                 if ($row['record'] == $recordToCheck) {
                     $destRecordExists = true;
