@@ -196,10 +196,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 			$dataToPipe = $this->translateRecordData($recordData,$sourceProject,$targetProject,$sourceFields,$recordToCheck,$event_id,$repeat_instance);
 
-            /*echo "Data for ".$targetProject->table_pk."<br/>";
-            echo "<pre>";
-            print_r($dataToPipe);
-            echo "</pre>";*/
 			if ($recordToCheck != "") {
                 $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
                 $errors = $results['errors'];
@@ -486,7 +482,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $destInstrumentRepeats = $destProject->isRepeatingForm($destEvent, $destInstrument);
         $destEventRepeats = $destProject->isRepeatingEvent($destEvent);
 
-        if (in_array($destInstrument,$destEventForms) && $srcMeta[$srcFieldName]['element_type'] == $destMeta[$srcFieldName]['element_type'] && $srcMeta[$srcFieldName]['element_enum'] == $destMeta[$srcFieldName]['element_enum']) {
+        if (in_array($destInstrument,$destEventForms) && $srcMeta[$srcFieldName]['element_type'] == $destMeta[$srcFieldName]['element_type'] && $this->matchEnum($srcMeta[$srcFieldName]['element_enum'],$destMeta[$srcFieldName]['element_enum'])) {
             if ($destInstrumentRepeats) {
                 $destData[$destRecord][$destEvent][$destRecordField] = $destRecord;
                 //$destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = "";
@@ -501,6 +497,24 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 $destData[$destRecord][$destEvent][$srcFieldName] = $srcFieldValue;
             }
         }
+    }
+
+    function matchEnum($srcEnum, $destEnum) {
+        $destEnum = str_replace(' \n','\n',$destEnum);
+        $destEnum = str_replace('\n ','\n',$destEnum);
+        $destEnum = str_replace(' ,',',',$destEnum);
+        $destEnum = str_replace(', ',',',$destEnum);
+        $destEnum = rtrim($destEnum);
+        $srcEnum = str_replace(' \n','\n',$srcEnum);
+        $srcEnum = str_replace('\n ','\n',$srcEnum);
+        $srcEnum = str_replace(' ,',',',$srcEnum);
+        $srcEnum = str_replace(', ',',',$srcEnum);
+        $srcEnum = rtrim($srcEnum);
+
+        if ($srcEnum == $destEnum) {
+            return true;
+        }
+        return false;
     }
 
     /*function getAutoId($projectId,$eventId = "")
