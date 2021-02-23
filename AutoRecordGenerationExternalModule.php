@@ -23,7 +23,10 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		}
 
 		define(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record,1);
-
+		
+		## In case this gets triggered by a cron, set PID
+		$_GET['pid'] = $project_id;
+		
 		$this->copyValuesToDestinationProjects($record, $event_id);
 	}
 
