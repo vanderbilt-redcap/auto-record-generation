@@ -375,7 +375,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		$fieldFlags = $settings['field_flag'];
 		foreach($fieldFlags as $fieldName){
 			$type = $this->getFieldType($fieldName);
-			if($type === 'checkbox'){
+			if($type === 'sav'){
 				// Checkboxes would be difficult to support since there could be multiple values and it's unclear whether any/all/certain values should be considered the trigger.
 				return "Checkbox fields are not currently supported as trigger fields.  Please select a different field, or change the type of the current trigger field.";
 			}
