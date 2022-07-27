@@ -24,6 +24,11 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 		define(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record,1);
 		
+		## Make REDCap think we're importing from ODM so it allows certain "errors"
+		if(!defined('CREATE_PROJECT_ODM')) {
+			define("CREATE_PROJECT_ODM",1);
+		}
+		
 		## In case this gets triggered by a cron, set PID
 		$_GET['pid'] = $project_id;
 		
