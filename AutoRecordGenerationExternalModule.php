@@ -182,10 +182,10 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 		if($debug == "1"){
 			$this->log("Checking values for pid $targetProjectID", [
-			    '$targetProjectID' => $targetProjectID,
-				'$destinationRecordID' => $recordToCheck,
-				'$overwrite' => $overwrite,
-				'$destRecordExists' => $destRecordExists
+			    'targetProjectID' => $targetProjectID,
+				'destinationRecordID' => $recordToCheck,
+				'overwrite' => $overwrite,
+				'destRecordExists' => $destRecordExists
 			]);
 		}
 
