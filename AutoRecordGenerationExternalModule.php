@@ -170,7 +170,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $recordToCheck = $this->getNewRecordName($targetProject,$recordData,$destinationProject["new_record"],$project_id,$event_id,$repeat_instance);
 
         if ($recordToCheck != "") {
-            $table = $this->getDataTable();
+            $table = $this->getDataTable($targetProjectID);
             $targetRecordSql = "SELECT record FROM $table WHERE project_id='$targetProjectID' && record='$recordToCheck' LIMIT 1";
             $result = db_query($targetRecordSql);
 
@@ -545,7 +545,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         if ($newParticipantId == "") $newParticipantId = 0;
         $newParticipantId++;
 
-        $table = $this->getDataTable();
+        $table = $this->getDataTable($projectId);
         $sql = "INSERT INTO $table (project_id, event_id, record, field_name, value) VALUES
 			({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
 
@@ -554,7 +554,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $logSql = $sql;
 
         # Verify the new auto ID hasn't been duplicated
-        $table = $this->getDataTable();
+        $table = $this->getDataTable($projectId);
         $sql = "SELECT d.field_name
 			FROM $table d
 			WHERE d.project_id = {$projectId}
@@ -576,7 +576,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
             @db_query("BEGIN");
 
-            $table = $this->getDataTable();
+            $table = $this->getDataTable($projectId);
             $sql = "INSERT INTO $table (project_id, event_id, record, field_name, value) VALUES
 				({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
             $logSql = $sql;
@@ -584,7 +584,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             db_query($sql);
             @db_query("COMMIT");
 
-            $table = $this->getDataTable();
+            $table = $this->getDataTable($projectId);
             $sql = "SELECT d.field_name
 				FROM $table d
 				WHERE d.project_id = {$projectId}
