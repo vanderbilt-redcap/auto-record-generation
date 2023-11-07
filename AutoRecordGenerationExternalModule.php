@@ -518,7 +518,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         return false;
     }
 
-    function getDataTable(){
+    function getDataTable($project_id){
         return method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($project_id) : "redcap_data"; 
     }
 
