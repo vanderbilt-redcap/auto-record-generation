@@ -170,7 +170,8 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $recordToCheck = $this->getNewRecordName($targetProject,$recordData,$destinationProject["new_record"],$project_id,$event_id,$repeat_instance);
 
         if ($recordToCheck != "") {
-            $targetRecordSql = "SELECT record FROM redcap_data WHERE project_id='$targetProjectID' && record='$recordToCheck' LIMIT 1";
+            $table = $this->getDataTable($targetProjectID);
+            $targetRecordSql = "SELECT record FROM $table WHERE project_id='$targetProjectID' && record='$recordToCheck' LIMIT 1";
             $result = db_query($targetRecordSql);
 
             while ($row = db_fetch_assoc($result)) {
@@ -517,6 +518,10 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         return false;
     }
 
+    function getDataTable($project_id){
+        return method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($project_id) : "redcap_data"; 
+    }
+
     /*function getAutoId($projectId,$eventId = "")
     {
         $inTransaction = false;
@@ -540,7 +545,8 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         if ($newParticipantId == "") $newParticipantId = 0;
         $newParticipantId++;
 
-        $sql = "INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES
+        $table = $this->getDataTable($projectId);
+        $sql = "INSERT INTO $table (project_id, event_id, record, field_name, value) VALUES
 			({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
 
         db_query($sql);
@@ -548,8 +554,9 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $logSql = $sql;
 
         # Verify the new auto ID hasn't been duplicated
+        $table = $this->getDataTable($projectId);
         $sql = "SELECT d.field_name
-			FROM redcap_data d
+			FROM $table d
 			WHERE d.project_id = {$projectId}
 				AND d.record = '$newParticipantId'";
 
@@ -569,15 +576,17 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
             @db_query("BEGIN");
 
-            $sql = "INSERT INTO redcap_data (project_id, event_id, record, field_name, value) VALUES
+            $table = $this->getDataTable($projectId);
+            $sql = "INSERT INTO $table (project_id, event_id, record, field_name, value) VALUES
 				({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
             $logSql = $sql;
 
             db_query($sql);
             @db_query("COMMIT");
 
+            $table = $this->getDataTable($projectId);
             $sql = "SELECT d.field_name
-				FROM redcap_data d
+				FROM $table d
 				WHERE d.project_id = {$projectId}
 					AND d.record = '$newParticipantId'";
 
