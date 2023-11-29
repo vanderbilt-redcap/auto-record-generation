@@ -171,8 +171,8 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
         if ($recordToCheck != "") {
             $table = $this->getDataTable($targetProjectID);
-            $targetRecordSql = "SELECT record FROM $table WHERE project_id='$targetProjectID' && record='$recordToCheck' LIMIT 1";
-            $result = db_query($targetRecordSql);
+            $targetRecordSql = "SELECT record FROM $table WHERE project_id=? && record=? LIMIT 1";
+            $result = db_query($targetRecordSql,[$targetProjectID,$recordToCheck]);
 
             while ($row = db_fetch_assoc($result)) {
                 if ($row['record'] == $recordToCheck) {
