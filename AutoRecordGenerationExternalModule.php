@@ -257,7 +257,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 from redcap_metadata 
                 where project_id = ? 
                 and field_name = ?";
-		$result = $this->query($sql,[$this->escape($this->getProjectId()),$this->escape($fieldName)]);
+		$result = $this->query($sql,[$this->getProjectId(),$fieldName]);
 		$row = $result->fetch_assoc();
 
 		return $row['element_type'];
@@ -335,7 +335,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 							or
 							s.value not like '$prefix%'
 						)";
-			return $this->query($sql,[$this->escape($fieldName)]);
+			return $this->query($sql,[$fieldName]);
 		};
 
 		$handleField = function($fieldName, $leadingBracketsRequired) use ($query){
