@@ -253,7 +253,11 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		}
 
 		$fieldName = db_real_escape_string($fieldName);
-		$result = $this->query("select element_type from redcap_metadata where project_id = " . $this->getProjectId() . " and field_name = '$fieldName'");
+        $sql = "select element_type 
+                from redcap_metadata 
+                where project_id = ? 
+                and field_name = ?";
+		$result = $this->query($sql,[$this->getProjectId(),$fieldName]);
 		$row = $result->fetch_assoc();
 
 		return $row['element_type'];
@@ -316,7 +320,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				$leadingBracketsRequired--;
 			}
 
-			return $this->query("
+            $sql = "
 				$beginning 
 					redcap_external_module_settings s
 					join redcap_external_modules m
@@ -324,14 +328,14 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 				$setClause
 				where
 					m.directory_prefix = '" . $this->PREFIX . "'
-					and s.`key` = '$fieldName'
+					and s.`key` = ?
 					and
 						(
 							type <> 'json-array'
 							or
 							s.value not like '$prefix%'
-						)
-			");
+						)";
+			return $this->query($sql,[$fieldName]);
 		};
 
 		$handleField = function($fieldName, $leadingBracketsRequired) use ($query){
@@ -520,6 +524,10 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
     function getDataTable($project_id){
         return method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($project_id) : "redcap_data"; 
+    }
+
+    function escape($arg){
+        return $this->framework->escape($arg);
     }
 
     /*function getAutoId($projectId,$eventId = "")
