@@ -1,5 +1,5 @@
 Auto Record Generation External Module
-This module is designed to allow for the data from one REDCap project to be migrated to another. This migration is handled by a trigger data field being saved. The module is designed to migrate any or every data field in the source project that matches a data field in the destination project by both name and type.
+This module is designed to allow for the data from one REDCap project to be migrated to another. This migration is handled by a trigger data field being saved. The module is designed to migrate any or every data field in the source project that matches a data field in the destination project by both name and type. Please note that this module **does not** copy the data access group (DAG) for any migrated records.
 
 Explanation of Module settings and functionality:
 - "Project in Which to Generate New Record":

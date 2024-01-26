@@ -13,7 +13,7 @@
     }
   ],
 
-  "description": "Module that allows for a new record to be generated in another project (or the same project) on a flagging field being saved. Allows for data fields to be transferred to the new record as well.<br><b>Events and repeating instruments are NOT currently supported.</b>",
+  "description": "Module that allows for a new record to be generated in another project (or the same project) on a flagging field being saved. Allows for data fields to be transferred to the new record as well.<br><b>Events, repeating instruments, and data access groups (DAGs) are NOT currently supported.</b>",
 
   "permissions": [
     "redcap_module_system_enable",
