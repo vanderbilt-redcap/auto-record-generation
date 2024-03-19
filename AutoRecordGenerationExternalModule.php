@@ -18,7 +18,8 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
 		## Prevent hook from being called multiple times on each project/record pair
-		if(constant(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record) == 1) {
+		if(defined(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record) && 
+				constant(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record) == 1) {
 			return;
 		}
 
