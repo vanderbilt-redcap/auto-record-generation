@@ -15,6 +15,8 @@ use REDCap;
 
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
+	const RECORD_CREATED_BY_MODULE = "auto_record_module_saved";
+
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
         //The below code was necessary for resetting module settings for a project so it could be reset with all new records.
 
@@ -36,6 +38,22 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
     }
 
 	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
+		## Prevent hook from being called multiple times on each project/record pair
+		if(defined(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record) &&
+				constant(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record) == 1) {
+			return;
+		}
+
+		define(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record,1);
+
+		## Make REDCap think we're importing from ODM so it allows certain "errors"
+		if(!defined('CREATE_PROJECT_ODM')) {
+			define("CREATE_PROJECT_ODM",1);
+		}
+
+		## In case this gets triggered by a cron, set PID
+		$_GET['pid'] = $project_id;
+
 		$this->copyValuesToDestinationProjects($record, $event_id, $repeat_instance);
 	}
 
@@ -241,6 +259,28 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                             //echo "Log ID: $logID for " . $recordToCheck . "<br/>";
                         }
                     }
+					$target_project_index = array_search($targetProjectID, $this->getProjectSetting("destination_project"));
+					if ($this->getProjectSetting("trigger_save_hook_flag")[$target_project_index] === true) {
+						## Call the save record hook on the new record
+						# Cache get params to reset later
+						$oldId = $_GET['id'];
+						$oldPid = $_GET['pid'];
+
+						## Set the $_GET parameter to avoid errors / source project being affected
+						$_GET['pid'] = $targetProjectID;
+						$_GET['id'] = $dataToPipe[$targetProject->table_pk];
+
+						## Prevent module errors from crashing the whole import process
+						try {
+							ExternalModules::callHook("redcap_save_record",[$_GET['pid'],$_GET['id'],NULL,$targetProject->firstEventId,NULL,NULL,NULL]);
+						}
+						catch(\Exception $e) {
+							error_log("External Module Error - Project: ".$_GET['pid']." - Record: ".$_GET['id'].": ".$e->getMessage());
+						}
+
+						$_GET['id'] = $oldId;
+						$_GET['pid'] = $oldPid;
+					}
                 }
             }
 		}
