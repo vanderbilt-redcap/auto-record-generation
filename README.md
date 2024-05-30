@@ -4,6 +4,9 @@ This module is designed to allow for the data from one REDCap project to be migr
 Explanation of Module settings and functionality:
 - "Project in Which to Generate New Record":
     This is a list of any REDCap projects that the user setting up the module has access to. If the required REDCap project is not in this dropdown, add yourself to the required REDCap project as a user.
+
+- "Trigger save record save hook on target project":
+    Toggle to execute the `redcap_save_record` hook in the destination project after records are copied over, simulating a user clocking "Save" on the _first event_ in the destination project. May be necessary to allow external modules in the target project to act as expected on auto generated records.
     
 - "Field to Trigger Record Generation":
     This needs to be a data field on the project that needs to have a value entered to trigger the data migration. Any value will trigger this action.

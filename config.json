@@ -48,6 +48,11 @@
           "type": "project-id"
         },
         {
+          "key": "trigger_save_hook_flag",
+          "name": "Trigger save record save hook on target project",
+          "type": "checkbox"
+        },
+        {
           "key": "field_flag",
           "name": "Field to Trigger Record Generation",
           "type": "field-list"
