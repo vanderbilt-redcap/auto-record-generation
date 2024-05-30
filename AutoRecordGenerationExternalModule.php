@@ -259,7 +259,8 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                             //echo "Log ID: $logID for " . $recordToCheck . "<br/>";
                         }
                     }
-					if ($this->getProjectSetting("trigger_save_hook_flag")[0] === true) {
+					$target_project_index = array_search($targetProjectID, $this->getProjectSetting("destination_project"));
+					if ($this->getProjectSetting("trigger_save_hook_flag")[$target_project_index] === true) {
 						## Call the save record hook on the new record
 						# Cache get params to reset later
 						$oldId = $_GET['id'];
