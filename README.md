@@ -6,7 +6,7 @@ Explanation of Module settings and functionality:
     This is a list of any REDCap projects that the user setting up the module has access to. If the required REDCap project is not in this dropdown, add yourself to the required REDCap project as a user.
     
 - "Field to Trigger Record Generation":
-    This needs to be a data field on the project that needs to have a value entered to trigger the data migration. Any value will trigger this action. Data migrations will only happen if the data entry form this field is on is the form being saved.
+    This needs to be a data field on the project that needs to have a value entered to trigger the data migration. Any value will trigger this action.
 
 - "Name for New Record":
     This setting determines how to name the record in the destination project. If this setting is left blank, the code will use auto-numbered record IDs. This setting accepts basic data piping as present in setting up REDCap data fields. For example, if you wanted to use the value from the data field with name "record_name" as the record ID in the destination project, the value for this setting would be "[record_name]".
