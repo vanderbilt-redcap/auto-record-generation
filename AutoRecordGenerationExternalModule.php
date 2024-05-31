@@ -272,7 +272,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 						## Prevent module errors from crashing the whole import process
 						try {
-							ExternalModules::callHook("redcap_save_record",[$_GET['pid'],$_GET['id'],NULL,$targetProject->firstEventId,NULL,NULL,NULL]);
+							ExternalModules::callHook("redcap_save_record",[$_GET['pid'],$_GET['id'],NULL,$targetProject->firstEventId,NULL,NULL,NULL,NULL]);
 						}
 						catch(\Exception $e) {
 							error_log("External Module Error - Project: ".$_GET['pid']." - Record: ".$_GET['id'].": ".$e->getMessage());
