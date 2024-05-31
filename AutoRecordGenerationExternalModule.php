@@ -261,14 +261,19 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                     }
 					$target_project_index = array_search($targetProjectID, $this->getProjectSetting("destination_project"));
 					if ($this->getProjectSetting("trigger_save_hook_flag")[$target_project_index] === true) {
+						global $Proj;
 						## Call the save record hook on the new record
 						# Cache get params to reset later
 						$oldId = $_GET['id'];
 						$oldPid = $_GET['pid'];
+						$oldProj = $Proj;
 
 						## Set the $_GET parameter to avoid errors / source project being affected
 						$_GET['pid'] = $targetProjectID;
 						$_GET['id'] = $dataToPipe[$targetProject->table_pk];
+						$Proj = $targetProject;
+
+						$target_record_id = array_keys($dataToPipe)[0];
 
 						## Prevent module errors from crashing the whole import process
 						## NOTE: this does NOT catch errors thrown while the target module's redcap_save_record hook is running;
@@ -276,7 +281,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 						try {
 							$redcap_save_record_args = [
 								/* $project_id = */ $_GET['pid'],
-								/* $record = */ $_GET['id'],
+								/* $record = */ $target_record_id,
 								/* $instrument = */ NULL,
 								/* $event_id = */ $targetProject->firstEventId,
 								/* $group_id = */ NULL,
@@ -292,6 +297,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 						$_GET['id'] = $oldId;
 						$_GET['pid'] = $oldPid;
+						$Proj = $oldProj;
 					}
                 }
             }
