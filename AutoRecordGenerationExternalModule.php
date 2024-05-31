@@ -270,10 +270,8 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 						## Set the $_GET parameter to avoid errors / source project being affected
 						$_GET['pid'] = $targetProjectID;
-						$_GET['id'] = $dataToPipe[$targetProject->table_pk];
+						$_GET['id'] = array_keys($dataToPipe)[0];
 						$Proj = $targetProject;
-
-						$target_record_id = array_keys($dataToPipe)[0];
 
 						## Prevent module errors from crashing the whole import process
 						## NOTE: this does NOT catch errors thrown while the target module's redcap_save_record hook is running;
@@ -281,7 +279,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 						try {
 							$redcap_save_record_args = [
 								/* $project_id = */ $_GET['pid'],
-								/* $record = */ $target_record_id,
+								/* $record = */ $_GET['id'],
 								/* $instrument = */ NULL,
 								/* $event_id = */ $targetProject->firstEventId,
 								/* $group_id = */ NULL,
