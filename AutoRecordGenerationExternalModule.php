@@ -285,7 +285,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 								/* $group_id = */ NULL,
 								/* $survey_hash = */ NULL,
 								/* $response_id = */ NULL,
-								/* $repeat_instance = */ NULL
+								/* $repeat_instance = */ $repeat_instance
 							];
 							ExternalModules::callHook("redcap_save_record", $redcap_save_record_args);
 						}
