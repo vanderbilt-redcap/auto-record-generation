@@ -12,6 +12,7 @@ use ExternalModules\AbstractExternalModule;
 use ExternalModules\ExternalModules;
 use mysql_xdevapi\Exception;
 use REDCap;
+use function PHPUnit\Framework\isNull;
 
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
@@ -19,7 +20,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
         //The below code was necessary for resetting module settings for a project so it could be reset with all new records.
-
         /*if (in_array($project_id,array(103538,102495,106458,102710,111557,111562,116774,116805,116831))) {
             $remove = $this->removeLogs("DELETE WHERE message LIKE 'Auto record for%'");
             echo "<pre>";
@@ -57,22 +57,31 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		$this->copyValuesToDestinationProjects($record, $event_id, $repeat_instance);
 	}
 
-	function getNewRecordName(\Project $project, $recordData,$recordSetting,$srcProjectID,$event_id,$repeat_instance = 1) {
+	function getNewRecordName(\Project $project, $recordData,$destIndex,$recordSetting,$srcProjectID,$event_id,$repeat_instance = 1) {
         $newRecordID = "";
 
         if ($recordSetting == "") {
             $destinationRecordID = "";
-            $queryLogs = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for ".array_keys($recordData)[0]."'");
+            $queryLogs = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for ".array_keys($recordData)[0]."'",[]);
 
             while ($row = db_fetch_assoc($queryLogs)) {
                 if ($row['destination_record_id'] != "") {
-                    $destinationRecordID = $row['destination_record_id'];
+                    try {
+                        $destinationRecordID = json_decode($row['destination_record_id'], true,512,JSON_THROW_ON_ERROR);
+                    } catch (\JsonException $e) {
+                        $destinationRecordID = $row['destination_record_id'];
+                    }
                 }
                 elseif ($row['record'] != "") {
                     $destinationRecordID = $row['record'];
                 }
             }
-            $newRecordID = ($destinationRecordID != "" ? $destinationRecordID : \DataEntry::getAutoId($project->project_id));
+            if (is_array($destinationRecordID)) {
+                $newRecordID = ($destinationRecordID[$project->project_id][$destIndex] ?? \DataEntry::getAutoId($project->project_id));
+            }
+            else {
+                $newRecordID = ($destinationRecordID != "" ? $destinationRecordID : \DataEntry::getAutoId($project->project_id));
+            }
         }
         else {
             $validRecordData = array();
@@ -123,8 +132,9 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $project_id = $this->getProjectId();
         $currentProject = new \Project($project_id);
         $eventName = $currentProject->uniqueEventNames[$event_id];
+        $logProjectRecords = [];
 
-		foreach ($destinationProjects as $destinationProject) {
+		foreach ($destinationProjects as $destIndex => $destinationProject) {
             $flagFieldName = $destinationProject['field_flag'];
             $results = json_decode(REDCap::getData($project_id, 'json', $record, $flagFieldName, $event_id),true);
 
@@ -164,13 +174,19 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
             //echo "Trigger field set: ".($triggerFieldSet ? "True" : "False")."<br/>";
             if ($triggerFieldSet) {
-                $this->handleDestinationProject($record, $event_id, $destinationProject, $repeat_instance);
+                $handleResult = $this->handleDestinationProject($record, $event_id, (string)$destIndex, $destinationProject, $repeat_instance);
+                if (!empty($handleResult)) {
+                    $logProjectRecords = $logProjectRecords + $handleResult;
+                }
             }
 		}
+        if (!empty($logProjectRecords)) {
+            $logID = $this->log("Auto record for " . $record, ["destination_record_id" => json_encode($logProjectRecords)]);
+        }
 		//$this->exitAfterHook();
 	}
 
-	private function handleDestinationProject($record, $event_id, $destinationProject, $repeat_instance = 1) {
+	private function handleDestinationProject($record, $event_id, $destIndex, $destinationProject, $repeat_instance = 1) {
 		$project_id = $this->getProjectId();
 
 		$targetProjectID = $destinationProject['destination_project'];
@@ -178,6 +194,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $targetProject = new \Project($targetProjectID);
         $sourceProject = new \Project($project_id);
         $debug = $destinationProject['enable_debug_logging'];
+        $destProjectRecord = [];
 
         $recordData = \Records::getData($project_id,'array',$record);
 
@@ -185,7 +202,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
         $destRecordExists = false;
 
-        $recordToCheck = $this->getNewRecordName($targetProject,$recordData,$destinationProject["new_record"],$project_id,$event_id,$repeat_instance);
+        $recordToCheck = $this->getNewRecordName($targetProject,$recordData,$destIndex,$destinationProject["new_record"],$project_id,$event_id,$repeat_instance);
 
         if ($recordToCheck != "") {
             $table = $this->getDataTable($targetProjectID);
@@ -246,7 +263,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 else {
                     if ($destinationProject["new_record"] == "") {
                         $newRecord = true;
-                        $queryLogs = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for " . array_keys($recordData)[0] . "'");
+                        $queryLogs = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for " . array_keys($recordData)[0] . "'",[]);
 
                         while ($row = db_fetch_assoc($queryLogs)) {
                             if ($row['destination_record_id'] != "" || $row['record'] != "") {
@@ -255,7 +272,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                         }
 
                         if ($newRecord) {
-                            $logID = $this->log("Auto record for " . $record, ["destination_record_id" => $recordToCheck]);
+                            $destProjectRecord[$targetProjectID][$destIndex] = (string)$recordToCheck;
                             //echo "Log ID: $logID for " . $recordToCheck . "<br/>";
                         }
                     }
@@ -301,6 +318,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
 		}
 		//$this->exitAfterHook();
+        return $destProjectRecord;
 	}
 
 	private function getFieldType($fieldName) {
