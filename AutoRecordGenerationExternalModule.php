@@ -51,7 +51,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             $queryLogs = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for $srcRecordID'",[]);
             $recordMapSetting = $this->getProjectSetting("destination_record_id_".$srcRecordID."_".$project->project_id,$srcProjectID);
             if ($recordMapSetting != "") {
-                $destinationRecordID = json_decode($recordMapSetting);
+                $destinationRecordID = json_decode($recordMapSetting,true);
             }
             else {
                 while ($row = db_fetch_assoc($queryLogs)) {
