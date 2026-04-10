@@ -44,10 +44,10 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 	function getNewRecordName(\Project $project, $recordData,$destIndex,$recordSetting,$srcProjectID,$event_id,$repeat_instance = 1) {
         $newRecordID = "";
+        $srcRecordID = array_keys($recordData)[0];
 
         if ($recordSetting == "") {
             $destinationRecordID = "";
-            $srcRecordID = array_keys($recordData)[0];
             $queryLogs = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for $srcRecordID'",[]);
             $recordMapSetting = $this->getProjectSetting("destination_record_id_".$srcRecordID."_".$project->project_id,$srcProjectID);
             if ($recordMapSetting != "") {
@@ -72,41 +72,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
         }
         else {
-            $validRecordData = array();
-
-            foreach ($recordData as $recordID => $data) {
-                foreach ($data as $eventID => $eventData) {
-                    if ($eventID == "repeat_instances") {
-                        foreach ($eventData as $subEventID => $subEventData) {
-                            if ($subEventID == $event_id) {
-                                $destEventRepeats = $project->isRepeatingEvent($subEventID);
-                                foreach ($subEventData as $subInstrument => $subInstrumentData) {
-                                    $destInstrumentRepeats = ($subInstrument != "" ? $project->isRepeatingForm($subEventID, $subInstrument) : 0);
-                                    foreach ($subInstrumentData as $subInstance => $subInstanceData) {
-                                        if ($subInstance == $repeat_instance) {
-                                            foreach ($subInstanceData as $fieldName => $fieldValue) {
-                                                if ($fieldValue != "") {
-                                                    $validRecordData[$fieldName] = $fieldValue;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } elseif ($eventID == $event_id) {
-                        $destEventRepeats = $project->isRepeatingEvent($event_id);
-                        foreach ($eventData as $fieldName => $fieldValue) {
-                            $destInstrumentRepeats = $project->isRepeatingForm($eventID, $project->metadata[$fieldName]['form_name']);
-                            if (!$destEventRepeats && !$destInstrumentRepeats) {
-                                $validRecordData[$fieldName] = $fieldValue;
-                            }
-                        }
-                    }
-                }
-            }
-
-            $newRecordID = $this->parseRecordSetting($recordSetting,$validRecordData);
+            $newRecordID = \Piping::replaceVariablesInLabel($recordSetting,$srcRecordID,$event_id,$repeat_instance,$recordData,true,$srcProjectID,false);
         }
         return $newRecordID;
     }
@@ -301,17 +267,6 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		$row = $result->fetch_assoc();
 
 		return $row['element_type'];
-	}
-
-	function parseRecordSetting($recordsetting,$recorddata) {
-		$returnString = $recordsetting;
-		preg_match_all("/\[(.*?)\]/",$recordsetting,$matchRegEx);
-		$stringsToReplace = $matchRegEx[0];
-		$fieldNamesReplace = $matchRegEx[1];
-		foreach ($fieldNamesReplace as $index => $fieldName) {
-			$returnString = db_real_escape_string(str_replace($stringsToReplace[$index],$recorddata[$fieldName],$returnString));
-		}
-		return $returnString;
 	}
 
 	function getSourceFields($project_id,$pipeSettings) {
