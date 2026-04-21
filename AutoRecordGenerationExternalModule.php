@@ -44,32 +44,31 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
 	function getNewRecordName(\Project $project, $recordData,$destIndex,$recordSetting,$srcProjectID,$event_id,$repeat_instance = 1) {
         $newRecordID = "";
+        if(!is_array($recordData) || empty($recordData)) {
+            // return default in case of missing data
+            return $newRecordID;
+        }
         $srcRecordID = array_keys($recordData)[0];
 
         if ($recordSetting == "") {
-            $destinationRecordID = "";
-            $queryLogs = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for $srcRecordID'",[]);
+            $destinationRecordData = [];
+            $queryLogResults = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for $srcRecordID'",[]);
             $recordMapSetting = $this->getProjectSetting("destination_record_id_".$srcRecordID."_".$project->project_id,$srcProjectID);
             if ($recordMapSetting != "") {
-                $destinationRecordID = json_decode($recordMapSetting,true);
+                $destinationRecordData = json_decode($recordMapSetting,true);
             }
             else {
-                while ($row = db_fetch_assoc($queryLogs)) {
+                while ($row = db_fetch_assoc($queryLogResults)) {
                     if ($row['destination_record_id'] != "") {
-                        $destinationRecordID = $row['destination_record_id'];
+                        $destinationRecordData[$destIndex] = $row['destination_record_id'];
                         $this->removeLogs("message ='Auto record for $srcRecordID'", []);
                     } elseif ($row['record'] != "") {
-                        $destinationRecordID = $row['record'];
+                        $destinationRecordData[$destIndex] = $row['record'];
                     }
                 }
             }
 
-            if (is_array($destinationRecordID)) {
-                $newRecordID = ($destinationRecordID[$destIndex] ?? \DataEntry::getAutoId($project->project_id));
-            }
-            else {
-                $newRecordID = ($destinationRecordID != "" ? $destinationRecordID : \DataEntry::getAutoId($project->project_id));
-            }
+            $newRecordID = ($destinationRecordData[$destIndex] ?? \DataEntry::getAutoId($project->project_id));
         }
         else {
             $newRecordID = \Piping::replaceVariablesInLabel($recordSetting,$srcRecordID,$event_id,$repeat_instance,$recordData,true,$srcProjectID,false);
@@ -197,7 +196,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 else {
                     if ($destinationProject["new_record"] == "") {
                         $newRecord = true;
-                        $recordMapSetting = $this->getProjectSetting("destination_record_id_".array_keys($recordData)[0]."_".$targetProjectID,$project_id);
+                        $recordMapSetting = $this->getProjectSetting("destination_record_id_".$record."_".$targetProjectID,$project_id);
 
                         if (is_array($recordMapSetting) && isset($recordMapSetting[$destIndex])) {
                             $newRecord = false;
@@ -524,85 +523,4 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
     function escape($arg){
         return $this->framework->escape($arg);
     }
-
-    /*function getAutoId($projectId,$eventId = "")
-    {
-        $inTransaction = false;
-        try {
-            @db_query("BEGIN");
-        }
-        catch (Exception $e) {
-            $inTransaction = true;
-        }
-
-        ### Get a new Auto ID for the given project ###
-        $sql = "SELECT DISTINCT record
-			FROM redcap_data
-			WHERE project_id = $projectId
-				AND field_name = 'record_id'
-				AND value REGEXP '^[0-9]+$'
-			ORDER BY abs(record) DESC
-			LIMIT 1";
-
-        $newParticipantId = db_result(db_query($sql),0);
-        if ($newParticipantId == "") $newParticipantId = 0;
-        $newParticipantId++;
-
-        $table = $this->getDataTable($projectId);
-        $sql = "INSERT INTO $table (project_id, event_id, record, field_name, value) VALUES
-			({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
-
-        db_query($sql);
-        @db_query("COMMIT");
-        $logSql = $sql;
-
-        # Verify the new auto ID hasn't been duplicated
-        $table = $this->getDataTable($projectId);
-        $sql = "SELECT d.field_name
-			FROM $table d
-			WHERE d.project_id = {$projectId}
-				AND d.record = '$newParticipantId'";
-
-        $result = db_query($sql);
-
-        while(db_num_rows($result) > 1) {
-            # Delete, increment by a random integer and attempt to re-create the record
-            $sql = "DELETE FROM redcap_data
-				WHERE d.project_id = $projectId
-					AND d.record = '$newParticipantId'
-					AND d.field_name = 'record_id'
-				LIMIT 1";
-
-            db_query($sql);
-
-            $newParticipantId += rand(1,10);
-
-            @db_query("BEGIN");
-
-            $table = $this->getDataTable($projectId);
-            $sql = "INSERT INTO $table (project_id, event_id, record, field_name, value) VALUES
-				({$projectId},{$eventId},'$newParticipantId','record_id','$newParticipantId')";
-            $logSql = $sql;
-
-            db_query($sql);
-            @db_query("COMMIT");
-
-            $table = $this->getDataTable($projectId);
-            $sql = "SELECT d.field_name
-				FROM $table d
-				WHERE d.project_id = {$projectId}
-					AND d.record = '$newParticipantId'";
-
-            $result = db_query($sql);
-        }
-
-        \Logging::logEvent($logSql, $projectId, "INSERT", "redcap_data", $newParticipantId,"record_id='$newParticipantId'","Create Record");
-        //logUpdate($logSql, $projectId, "INSERT", "redcap_data", $newParticipantId,"record_id='$newParticipantId'","Create Record");
-
-        if($inTransaction) {
-            @db_query("BEGIN");
-        }
-        // Return new auto id value
-        return $newParticipantId;
-    }*/
 }
