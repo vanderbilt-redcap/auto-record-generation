@@ -3,7 +3,7 @@
 
   "namespace": "Vanderbilt\\AutoRecordGenerationExternalModule",
 
-  "framework-version": 2,
+  "framework-version": 16,
 
   "authors": [
     {
@@ -13,15 +13,7 @@
     }
   ],
 
-  "description": "Module that allows for a new record to be generated in another project (or the same project) on a flagging field being saved. Allows for data fields to be transferred to the new record as well.<br><b>Events and repeating instruments are NOT currently supported.</b>",
-
-  "permissions": [
-    "redcap_module_system_enable",
-    "redcap_module_system_change_version",
-    "redcap_save_record",
-    "redcap_data_entry_form",
-    "redcap_module_import_page_top"
-  ],
+  "description": "Module that allows for a new record to be generated in another project (or the same project) on a flagging field being saved. Allows for data fields to be transferred to the new record as well.",
 
   "links": {
     "project": [
@@ -59,7 +51,7 @@
         },
         {
           "key": "new_record",
-          "name": "Name for New Record (Accepts standard REDCap piping. Leave blank to use next auto ID)",
+          "name": "Name for New Record (Accepts standard REDCap piping and smart variables. Leave blank to use next auto ID)",
           "type": "text"
         },
         {
