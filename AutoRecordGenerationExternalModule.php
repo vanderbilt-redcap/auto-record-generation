@@ -73,7 +73,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         else {
             $newRecordID = \Piping::replaceVariablesInLabel($recordSetting,$srcRecordID,$event_id,$repeat_instance,$recordData,true,$srcProjectID,false);
         }
-        return $newRecordID;
+        return str_replace(['&','+','`','\`','#'],"",$newRecordID);
     }
 
 	function copyValuesToDestinationProjects($record, $event_id, $repeat_instance = 1) {
@@ -81,17 +81,28 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
         $project_id = $this->getProjectId();
         $currentProject = new \Project($project_id);
-        $eventName = $currentProject->uniqueEventNames[$event_id];
+        $eventName = \Event::getEventNameById($project_id,$event_id);
         $logProjectRecords = [];
 
 		foreach ($destinationProjects as $destIndex => $destinationProject) {
             $flagFieldName = $destinationProject['field_flag'];
-            $results = json_decode(REDCap::getData($project_id, 'json', $record, $flagFieldName, $event_id),true);
+            $results = json_decode(REDCap::getData([
+                'project_id' => $project_id,
+                'return_format' => 'json',
+                'records' => [$record],
+                'fields' => [$flagFieldName],
+                'events' => [$event_id],
+                'includeRepeatingFields' => true,
+                'returnIncludeRecordEventArray' => true
+            ]),true);
 
             ## Need to set default value as $flagFieldName may not exist
             $triggerFieldValue = "";
             foreach ($results as $indexData) {
-                if ((!isset($indexData['redcap_event_name']) || $indexData['redcap_event_name'] == $eventName) && $indexData[$flagFieldName] != "") {
+                if ((!isset($indexData['redcap_event_name']) || $indexData['redcap_event_name'] == $eventName)
+                    && (!isset($indexData['redcap_repeat_instance']) || $indexData['redcap_repeat_instance'] == $repeat_instance)
+                    && $indexData[$flagFieldName] != "")
+                {
                     $triggerFieldValue = $indexData[$flagFieldName];
                 }
             }
