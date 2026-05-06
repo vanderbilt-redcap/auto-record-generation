@@ -16,35 +16,38 @@ use function PHPUnit\Framework\isNull;
 
 class AutoRecordGenerationExternalModule extends AbstractExternalModule
 {
-	const RECORD_CREATED_BY_MODULE = "auto_record_module_saved";
+    const RECORD_CREATED_BY_MODULE = "auto_record_module_saved";
 
-    function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
+    public function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = null, $repeat_instance = 1)
+    {
 
     }
 
-	function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1) {
-		## Prevent hook from being called multiple times on each project/record pair
-		if(defined(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record) &&
-				constant(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record) == 1) {
-			return;
-		}
+    public function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance = 1)
+    {
+        ## Prevent hook from being called multiple times on each project/record pair
+        if (defined(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record) &&
+                constant(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record) == 1) {
+            return;
+        }
 
-		define(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record,1);
+        define(self::RECORD_CREATED_BY_MODULE.$project_id."~".$record, 1);
 
-		## Make REDCap think we're importing from ODM so it allows certain "errors"
-		if(!defined('CREATE_PROJECT_ODM')) {
-			define("CREATE_PROJECT_ODM",1);
-		}
+        ## Make REDCap think we're importing from ODM so it allows certain "errors"
+        if (!defined('CREATE_PROJECT_ODM')) {
+            define("CREATE_PROJECT_ODM", 1);
+        }
 
-		## In case this gets triggered by a cron, set PID
-		$_GET['pid'] = $project_id;
+        ## In case this gets triggered by a cron, set PID
+        $_GET['pid'] = $project_id;
 
-		$this->copyValuesToDestinationProjects($record, $event_id, $repeat_instance);
-	}
+        $this->copyValuesToDestinationProjects($record, $event_id, $repeat_instance);
+    }
 
-	function getNewRecordName(\Project $project, $recordData,$destIndex,$recordSetting,$srcProjectID,$event_id,$repeat_instance = 1) {
+    public function getNewRecordName(\Project $project, $recordData, $destIndex, $recordSetting, $srcProjectID, $event_id, $repeat_instance = 1)
+    {
         $newRecordID = "";
-        if(!is_array($recordData) || empty($recordData)) {
+        if (!is_array($recordData) || empty($recordData)) {
             // return default in case of missing data
             return $newRecordID;
         }
@@ -52,12 +55,11 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
         if ($recordSetting == "") {
             $destinationRecordData = [];
-            $queryLogResults = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for $srcRecordID'",[]);
-            $recordMapSetting = $this->getProjectSetting("destination_record_id_".$srcRecordID."_".$project->project_id,$srcProjectID);
+            $queryLogResults = $this->queryLogs("SELECT message, record, destination_record_id WHERE message='Auto record for $srcRecordID'", []);
+            $recordMapSetting = $this->getProjectSetting("destination_record_id_".$srcRecordID."_".$project->project_id, $srcProjectID);
             if ($recordMapSetting != "") {
-                $destinationRecordData = json_decode($recordMapSetting,true);
-            }
-            else {
+                $destinationRecordData = json_decode($recordMapSetting, true);
+            } else {
                 while ($row = db_fetch_assoc($queryLogResults)) {
                     if ($row['destination_record_id'] != "") {
                         $destinationRecordData[$destIndex] = $row['destination_record_id'];
@@ -69,22 +71,22 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
 
             $newRecordID = ($destinationRecordData[$destIndex] ?? \DataEntry::getAutoId($project->project_id));
+        } else {
+            $newRecordID = \Piping::replaceVariablesInLabel($recordSetting, $srcRecordID, $event_id, $repeat_instance, $recordData, true, $srcProjectID, false);
         }
-        else {
-            $newRecordID = \Piping::replaceVariablesInLabel($recordSetting,$srcRecordID,$event_id,$repeat_instance,$recordData,true,$srcProjectID,false);
-        }
-        return str_replace(['&','+','`','\`','#'],"",$newRecordID);
+        return str_replace(['&','+','`','\`','#'], "", $newRecordID);
     }
 
-	function copyValuesToDestinationProjects($record, $event_id, $repeat_instance = 1) {
-		$destinationProjects = $this->framework->getSubSettings('destination_projects');
+    public function copyValuesToDestinationProjects($record, $event_id, $repeat_instance = 1)
+    {
+        $destinationProjects = $this->framework->getSubSettings('destination_projects');
 
         $project_id = $this->getProjectId();
         $currentProject = new \Project($project_id);
-        $eventName = \Event::getEventNameById($project_id,$event_id);
+        $eventName = \Event::getEventNameById($project_id, $event_id);
         $logProjectRecords = [];
 
-		foreach ($destinationProjects as $destIndex => $destinationProject) {
+        foreach ($destinationProjects as $destIndex => $destinationProject) {
             $flagFieldName = $destinationProject['field_flag'];
             $results = json_decode(REDCap::getData([
                 'project_id' => $project_id,
@@ -94,24 +96,22 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 'events' => [$event_id],
                 'includeRepeatingFields' => true,
                 'returnIncludeRecordEventArray' => true
-            ]),true);
+            ]), true);
 
             ## Need to set default value as $flagFieldName may not exist
             $triggerFieldValue = "";
             foreach ($results as $indexData) {
-                if ((!isset($indexData['redcap_event_name']) || $indexData['redcap_event_name'] == $eventName)
-                    && (!isset($indexData['redcap_repeat_instance']) || $indexData['redcap_repeat_instance'] == $repeat_instance)
-                    && $indexData[$flagFieldName] != "")
-                {
+                if ((!isset($indexData['redcap_event_name']) ||
+                        $indexData['redcap_event_name'] == $eventName) && (!isset($indexData['redcap_repeat_instance']) ||
+                        $indexData['redcap_repeat_instance'] == $repeat_instance) && $indexData[$flagFieldName] != "") {
                     $triggerFieldValue = $indexData[$flagFieldName];
                 }
             }
 
             $triggerFieldType = $this->getFieldType($flagFieldName);
-            if(in_array($triggerFieldType, ['yesno', 'truefalse'])){
+            if (in_array($triggerFieldType, ['yesno', 'truefalse'])) {
                 $triggerFieldSet = $triggerFieldValue === "1";
-            }
-            else{
+            } else {
                 $triggerFieldSet = $triggerFieldValue != "";
             }
             //echo "Trigger field set: ".($triggerFieldSet ? "True" : "False")."<br/>";
@@ -121,37 +121,38 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                     $logProjectRecords = $logProjectRecords + $handleResult;
                 }
             }
-		}
+        }
         if (!empty($logProjectRecords)) {
             foreach ($logProjectRecords as $logProjectID => $logProjectRecord) {
                 $this->setProjectSetting("destination_record_id_" . $record . "_" . $logProjectID, json_encode($logProjectRecord), $project_id);
             }
         }
-		//$this->exitAfterHook();
-	}
+        //$this->exitAfterHook();
+    }
 
-	private function handleDestinationProject($record, $event_id, $destIndex, $destinationProject, $repeat_instance = 1) {
-		$project_id = $this->getProjectId();
+    private function handleDestinationProject($record, $event_id, $destIndex, $destinationProject, $repeat_instance = 1)
+    {
+        $project_id = $this->getProjectId();
 
-		$targetProjectID = $destinationProject['destination_project'];
+        $targetProjectID = $destinationProject['destination_project'];
         $overwrite = ($destinationProject['overwrite-record'] == "overwrite" ? $destinationProject['overwrite-record'] : "normal");
         $targetProject = new \Project($targetProjectID);
         $sourceProject = new \Project($project_id);
         $debug = $destinationProject['enable_debug_logging'];
         $destProjectRecord = [];
 
-        $recordData = \Records::getData($project_id,'array',$record);
+        $recordData = \Records::getData($project_id, 'array', $record);
 
         $uniqueEventName = $sourceProject->getUniqueEventNames()[$event_id];
 
         $destRecordExists = false;
 
-        $recordToCheck = $this->getNewRecordName($targetProject,$recordData,$destIndex,$destinationProject["new_record"],$project_id,$event_id,$repeat_instance);
+        $recordToCheck = $this->getNewRecordName($targetProject, $recordData, $destIndex, $destinationProject["new_record"], $project_id, $event_id, $repeat_instance);
 
         if ($recordToCheck != "") {
             $table = $this->getDataTable($targetProjectID);
             $targetRecordSql = "SELECT record FROM $table WHERE project_id=? && record=? LIMIT 1";
-            $result = db_query($targetRecordSql,[$targetProjectID,$recordToCheck]);
+            $result = db_query($targetRecordSql, [$targetProjectID,$recordToCheck]);
 
             while ($row = db_fetch_assoc($result)) {
                 if ($row['record'] == $recordToCheck) {
@@ -160,30 +161,30 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             }
         }
 
-		if($debug == "1"){
-			$this->log("Checking values for pid $targetProjectID", [
-			    'targetProjectID' => $targetProjectID,
-				'destinationRecordID' => $recordToCheck,
-				'overwrite' => $overwrite,
-				'destRecordExists' => $destRecordExists
-			]);
-		}
+        if ($debug == "1") {
+            $this->log("Checking values for pid $targetProjectID", [
+                'targetProjectID' => $targetProjectID,
+                'destinationRecordID' => $recordToCheck,
+                'overwrite' => $overwrite,
+                'destRecordExists' => $destRecordExists
+            ]);
+        }
 
-		if ($targetProjectID != "" && is_numeric($targetProjectID) && ((!$destRecordExists && $overwrite == "normal") || $overwrite == "overwrite")) {
-			$sourceFields = $this->getSourceFields($project_id,$destinationProject['pipe_fields']);
-			//$recordData = \Records::getData($project_id,'array',array($record),$targetFields);
-			$dataToPipe = array();
+        if ($targetProjectID != "" && is_numeric($targetProjectID) && ((!$destRecordExists && $overwrite == "normal") || $overwrite == "overwrite")) {
+            $sourceFields = $this->getSourceFields($project_id, $destinationProject['pipe_fields']);
+            //$recordData = \Records::getData($project_id,'array',array($record),$targetFields);
+            $dataToPipe = array();
 
-			$dataToPipe = $this->translateRecordData($recordData,$sourceProject,$targetProject,$sourceFields,$recordToCheck,$event_id,$repeat_instance);
+            $dataToPipe = $this->translateRecordData($recordData, $sourceProject, $targetProject, $sourceFields, $recordToCheck, $event_id, $repeat_instance);
 
-			if ($recordToCheck != "") {
-                $results = \Records::saveData($targetProjectID, 'array', $dataToPipe,$overwrite);
+            if ($recordToCheck != "") {
+                $results = \Records::saveData($targetProjectID, 'array', $dataToPipe, $overwrite);
                 $errors = $results['errors'];
                 /*echo "Result:<br/>";
                 echo "<pre>";
                 print_r($results);
                 echo "</pre>";*/
-                if(!empty($errors)){
+                if (!empty($errors)) {
                     $errorString = stripslashes(json_encode($errors, JSON_PRETTY_PRINT));
                     $errorString = str_replace('""', '"', $errorString);
 
@@ -192,22 +193,20 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
                     $errorEmail = $this->getProjectSetting('error_email');
                     //if ($errorEmail == "") $errorEmail = "james.r.moore@vumc.org";
-                    if(!empty($errorEmail)){
+                    if (!empty($errorEmail)) {
                         ## Add check for universal from email address
                         global $from_email;
-                        if($from_email != '') {
+                        if ($from_email != '') {
                             $headers = "From: ".$from_email."\r\n";
-                        }
-                        else {
+                        } else {
                             $headers = null;
                         }
                         mail($errorEmail, $this->getModuleName() . " Module Error", $message, $headers);
                     }
-                }
-                else {
+                } else {
                     if ($destinationProject["new_record"] == "") {
                         $newRecord = true;
-                        $recordMapSetting = $this->getProjectSetting("destination_record_id_".$record."_".$targetProjectID,$project_id);
+                        $recordMapSetting = $this->getProjectSetting("destination_record_id_".$record."_".$targetProjectID, $project_id);
 
                         if (is_array($recordMapSetting) && isset($recordMapSetting[$destIndex])) {
                             $newRecord = false;
@@ -218,112 +217,116 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                             //echo "Log ID: $logID for " . $recordToCheck . "<br/>";
                         }
                     }
-					$target_project_index = array_search($targetProjectID, $this->getProjectSetting("destination_project"));
-					if ($this->getProjectSetting("trigger_save_hook_flag")[$target_project_index] === true) {
-						global $Proj;
-						## Call the save record hook on the new record
-						# Cache get params to reset later
-						$oldId = $_GET['id'];
-						$oldPid = $_GET['pid'];
-						$oldProj = $Proj;
+                    $target_project_index = array_search($targetProjectID, $this->getProjectSetting("destination_project"));
+                    if ($this->getProjectSetting("trigger_save_hook_flag")[$target_project_index] === true) {
+                        global $Proj;
+                        ## Call the save record hook on the new record
+                        # Cache get params to reset later
+                        $oldId = $_GET['id'];
+                        $oldPid = $_GET['pid'];
+                        $oldProj = $Proj;
 
-						## Set the $_GET parameter to avoid errors / source project being affected
-						$_GET['pid'] = $targetProjectID;
-						$_GET['id'] = array_keys($dataToPipe)[0];
-						$Proj = $targetProject;
+                        ## Set the $_GET parameter to avoid errors / source project being affected
+                        $_GET['pid'] = $targetProjectID;
+                        $_GET['id'] = array_keys($dataToPipe)[0];
+                        $Proj = $targetProject;
 
-						## Prevent module errors from crashing the whole import process
-						## NOTE: this does NOT catch errors thrown while the target module's redcap_save_record hook is running;
-						## errors from the target module will be handled as if the target module itself were running
-						try {
-							$redcap_save_record_args = [
-								/* $project_id = */ $_GET['pid'],
-								/* $record = */ $_GET['id'],
-								/* $instrument = */ NULL,
-								/* $event_id = */ $targetProject->firstEventId,
-								/* $group_id = */ NULL,
-								/* $survey_hash = */ NULL,
-								/* $response_id = */ NULL,
-								/* $repeat_instance = */ $repeat_instance
-							];
-							ExternalModules::callHook("redcap_save_record", $redcap_save_record_args);
-						}
-						catch(\Exception $e) {
-							error_log("External Module Error - Project: ".$_GET['pid']." - Record: ".$_GET['id'].": ".$e->getMessage());
-						}
+                        ## Prevent module errors from crashing the whole import process
+                        ## NOTE: this does NOT catch errors thrown while the target module's redcap_save_record hook is running;
+                        ## errors from the target module will be handled as if the target module itself were running
+                        try {
+                            $redcap_save_record_args = [
+                                /* $project_id = */ $_GET['pid'],
+                                /* $record = */ $_GET['id'],
+                                /* $instrument = */ null,
+                                /* $event_id = */ $targetProject->firstEventId,
+                                /* $group_id = */ null,
+                                /* $survey_hash = */ null,
+                                /* $response_id = */ null,
+                                /* $repeat_instance = */ $repeat_instance
+                            ];
+                            ExternalModules::callHook("redcap_save_record", $redcap_save_record_args);
+                        } catch (\Exception $e) {
+                            error_log("External Module Error - Project: ".$_GET['pid']." - Record: ".$_GET['id'].": ".$e->getMessage());
+                        }
 
-						$_GET['id'] = $oldId;
-						$_GET['pid'] = $oldPid;
-						$Proj = $oldProj;
-					}
+                        $_GET['id'] = $oldId;
+                        $_GET['pid'] = $oldPid;
+                        $Proj = $oldProj;
+                    }
                 }
             }
-		}
-		//$this->exitAfterHook();
+        }
+        //$this->exitAfterHook();
         return $destProjectRecord;
-	}
+    }
 
-	private function getFieldType($fieldName) {
-		if(empty($fieldName)){
-			return null;
-		}
+    private function getFieldType($fieldName)
+    {
+        if (empty($fieldName)) {
+            return null;
+        }
 
-		$fieldName = db_real_escape_string($fieldName);
+        $fieldName = db_real_escape_string($fieldName);
         $sql = "select element_type 
                 from redcap_metadata 
                 where project_id = ? 
                 and field_name = ?";
-		$result = $this->query($sql,[$this->getProjectId(),$fieldName]);
-		$row = $result->fetch_assoc();
+        $result = $this->query($sql, [$this->getProjectId(),$fieldName]);
+        $row = $result->fetch_assoc();
 
-		return $row['element_type'];
-	}
+        return $row['element_type'];
+    }
 
-	function getSourceFields($project_id,$pipeSettings) {
+    public function getSourceFields($project_id, $pipeSettings)
+    {
         $project = new \Project($project_id);
         $allFields = array_keys($project->metadata);
 
-		$returnFields = array();
-		if (is_array($pipeSettings) && !empty($pipeSettings) && $pipeSettings[0] != "") {
-			$returnFields = array_intersect($allFields, $pipeSettings);
-		}
-		else {
-			$returnFields = $allFields;
-		}
-		return $returnFields;
-	}
+        $returnFields = array();
+        if (is_array($pipeSettings) && !empty($pipeSettings) && $pipeSettings[0] != "") {
+            $returnFields = array_intersect($allFields, $pipeSettings);
+        } else {
+            $returnFields = $allFields;
+        }
+        return $returnFields;
+    }
 
-	function processFieldEnum($enum) {
-		$enumArray = array();
-		$splitEnum = explode("\\n",$enum);
-		foreach ($splitEnum as $valuePair) {
-			$splitPair = explode(",",$valuePair);
-			$enumArray[trim($splitPair[0])] = trim($splitPair[1]);
-		}
-		return $enumArray;
-	}
+    public function processFieldEnum($enum)
+    {
+        $enumArray = array();
+        $splitEnum = explode("\\n", $enum);
+        foreach ($splitEnum as $valuePair) {
+            $splitPair = explode(",", $valuePair);
+            $enumArray[trim($splitPair[0])] = trim($splitPair[1]);
+        }
+        return $enumArray;
+    }
 
-	function redcap_module_system_enable($version) {
-		// A version of this module with the older settings format could have previously been enabled.
-		// Make sure any old settings are updated.
-		self::ensureProperSubSettingsFormat();
-	}
+    public function redcap_module_system_enable($version)
+    {
+        // A version of this module with the older settings format could have previously been enabled.
+        // Make sure any old settings are updated.
+        self::ensureProperSubSettingsFormat();
+    }
 
-	function redcap_module_system_change_version($version, $old_version) {
-		// This could be a transition from a version of this module with the older settings format.
-		// Make sure any old settings are updated.
-		self::ensureProperSubSettingsFormat();
-	}
+    public function redcap_module_system_change_version($version, $old_version)
+    {
+        // This could be a transition from a version of this module with the older settings format.
+        // Make sure any old settings are updated.
+        self::ensureProperSubSettingsFormat();
+    }
 
-	// This function is required to update existing settings after 'pipe_fields' was wrapped in the 'destination_projects' sub settings group.
-	// This should have no effect on subsequent runs and should be safe and efficient to repeatedly run indefinitely on future updates.
-	private function ensureProperSubSettingsFormat() {
-		$query = function($beginning, $setClause, $fieldName, $leadingBracketsRequired){
-			$prefix = '';
-			while($leadingBracketsRequired > 0){
-				$prefix .= '[';
-				$leadingBracketsRequired--;
-			}
+    // This function is required to update existing settings after 'pipe_fields' was wrapped in the 'destination_projects' sub settings group.
+    // This should have no effect on subsequent runs and should be safe and efficient to repeatedly run indefinitely on future updates.
+    private function ensureProperSubSettingsFormat()
+    {
+        $query = function ($beginning, $setClause, $fieldName, $leadingBracketsRequired) {
+            $prefix = '';
+            while ($leadingBracketsRequired > 0) {
+                $prefix .= '[';
+                $leadingBracketsRequired--;
+            }
 
             $sql = "
 				$beginning 
@@ -340,62 +343,66 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 							or
 							s.value not like '$prefix%'
 						)";
-			return $this->query($sql,[$fieldName]);
-		};
+            return $this->query($sql, [$fieldName]);
+        };
 
-		$handleField = function($fieldName, $leadingBracketsRequired) use ($query){
-			$result = $query('select project_id, value from', '', $fieldName, $leadingBracketsRequired);
+        $handleField = function ($fieldName, $leadingBracketsRequired) use ($query) {
+            $result = $query('select project_id, value from', '', $fieldName, $leadingBracketsRequired);
 
-			while($row = $result->fetch_assoc()){
-				$this->log("Logging old '$fieldName' value before wrapping in extra array", $row);
+            while ($row = $result->fetch_assoc()) {
+                $this->log("Logging old '$fieldName' value before wrapping in extra array", $row);
 
-				$projectId = $row['project_id'];
+                $projectId = $row['project_id'];
 
-				$value = $this->getProjectSetting($fieldName, $projectId);
-				$this->setProjectSetting($fieldName, [$value], $projectId);
-			}
-		};
+                $value = $this->getProjectSetting($fieldName, $projectId);
+                $this->setProjectSetting($fieldName, [$value], $projectId);
+            }
+        };
 
-		$handleField('destination_project', 1);
-		$handleField('field_flag', 1);
-		$handleField('new_record', 1);
-		$handleField('overwrite-record', 1);
-		$handleField('pipe_fields', 2);
-	}
+        $handleField('destination_project', 1);
+        $handleField('field_flag', 1);
+        $handleField('new_record', 1);
+        $handleField('overwrite-record', 1);
+        $handleField('pipe_fields', 2);
+    }
 
-	function redcap_module_import_page_top() {
-		require_once __DIR__ . '/import-page-top.php';
-	}
+    public function redcap_module_import_page_top()
+    {
+        require_once __DIR__ . '/import-page-top.php';
+    }
 
-	function getEventNames(){
-		global $longitudinal;
-		$originalValue = $longitudinal;
+    public function getEventNames()
+    {
+        global $longitudinal;
+        $originalValue = $longitudinal;
 
-		// Override the longitudinal value so that event details are returned even if the project is not longitudinal
-		$longitudinal = true;
+        // Override the longitudinal value so that event details are returned even if the project is not longitudinal
+        $longitudinal = true;
 
-		$result = REDCap::getEventNames(true);
+        $result = REDCap::getEventNames(true);
 
-		$longitudinal = $originalValue;
+        $longitudinal = $originalValue;
 
-		return $result;
-	}
+        return $result;
+    }
 
-	function validateSettings($settings){
-		$fieldFlags = $settings['field_flag'];
-		foreach($fieldFlags as $fieldName){
-			$type = $this->getFieldType($fieldName);
-			if($type === 'sav'){
-				// Checkboxes would be difficult to support since there could be multiple values and it's unclear whether any/all/certain values should be considered the trigger.
-				return "Checkbox fields are not currently supported as trigger fields.  Please select a different field, or change the type of the current trigger field.";
-			}
-		}
-	}
+    public function validateSettings($settings)
+    {
+        $fieldFlags = $settings['field_flag'];
+        foreach ($fieldFlags as $fieldName) {
+            $type = $this->getFieldType($fieldName);
+            if ($type === 'sav') {
+                // Checkboxes would be difficult to support since there could be multiple values and it's unclear whether any/all/certain values should be considered the trigger.
+                return "Checkbox fields are not currently supported as trigger fields.  Please select a different field, or change the type of the current trigger field.";
+            }
+        }
+    }
 
-	function translateRecordData($sourceData, \Project $sourceProject, \Project $destProject, $fieldsToUse, $recordToUse, $eventToUse = "", $instanceToUse = "") {
-	    $eventMapping = array();
-	    $sourceEvents = $sourceProject->eventInfo;
-	    $destEvents = $destProject->eventInfo;
+    public function translateRecordData($sourceData, \Project $sourceProject, \Project $destProject, $fieldsToUse, $recordToUse, $eventToUse = "", $instanceToUse = "")
+    {
+        $eventMapping = array();
+        $sourceEvents = $sourceProject->eventInfo;
+        $destEvents = $destProject->eventInfo;
         $destEventIDLeft = $destEvents;
         $eventOffset = 0;
         $sourceMeta = $sourceProject->metadata;
@@ -405,52 +412,57 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 
         $destData = array();
 
-	    foreach ($sourceEvents as $eventID => $eventInfo) {
-	        if (count($destEvents) > 1) {
-	            foreach ($destEvents as $destID => $destEventInfo) {
-	                if ($eventInfo['name'] == $destEventInfo['name']) {
-	                    $eventMapping[$eventID] =  $destID;
-	                    unset($destEventIDLeft[$destID]);
+        foreach ($sourceEvents as $eventID => $eventInfo) {
+            if (count($destEvents) > 1) {
+                foreach ($destEvents as $destID => $destEventInfo) {
+                    if ($eventInfo['name'] == $destEventInfo['name']) {
+                        $eventMapping[$eventID] =  $destID;
+                        unset($destEventIDLeft[$destID]);
                     }
                 }
-            }
-	        elseif (($eventToUse != "" && $eventID == $eventToUse) || $eventToUse == "") {
-	            $destEventID = array_keys($destEvents)[0];
+            } elseif (($eventToUse != "" && $eventID == $eventToUse) || $eventToUse == "") {
+                $destEventID = array_keys($destEvents)[0];
 
-	            if ($destEventID != "") {
+                if ($destEventID != "") {
                     $eventMapping[$eventID] = $destEventID;
                     unset($destEventIDLeft[$destEventID]);
                     break;
                 }
             }
-	        $eventOffset++;
+            $eventOffset++;
         }
 
         $eventOffset = 0;
-	    foreach ($sourceEvents as $eventID => $eventInfo) {
-	        if (!isset($eventMapping[$eventID]) && count($destEventIDLeft) > 0) {
-	            $eventMapping[$eventID] = array_keys(array_slice($destEventIDLeft,$eventOffset,1,true))[0];
+        foreach ($sourceEvents as $eventID => $eventInfo) {
+            if (!isset($eventMapping[$eventID]) && count($destEventIDLeft) > 0) {
+                $eventMapping[$eventID] = array_keys(array_slice($destEventIDLeft, $eventOffset, 1, true))[0];
                 $eventOffset++;
             }
         }
 
-	    if (!empty($sourceData)) {
-	        foreach ($sourceData as $recordID => $recordData) {
-	            foreach ($recordData as $eventID => $eventData) {
-	                if ($eventID == "repeat_instances") {
-	                    foreach ($eventData as $subEventID => $subEventData) {
-	                        if (isset($eventMapping[$subEventID])) {
+        if (!empty($sourceData)) {
+            foreach ($sourceData as $recordID => $recordData) {
+                foreach ($recordData as $eventID => $eventData) {
+                    if ($eventID == "repeat_instances") {
+                        foreach ($eventData as $subEventID => $subEventData) {
+                            if (isset($eventMapping[$subEventID])) {
                                 $destEventID = $eventMapping[$subEventID];
                                 foreach ($subEventData as $instrument => $instrumentData) {
                                     foreach ($instrumentData as $instance => $instanceData) {
                                         if (($instanceToUse != "" && $instance == $instanceToUse) || $instanceToUse == "") {
                                             foreach ($instanceData as $fieldName => $fieldValue) {
-                                                if ($fieldValue == "") continue;
-                                                if ((in_array($fieldName,$fieldsToUse) || empty($fieldsToUse)) && in_array($fieldName,$destFields)) {
-                                                    if ($fieldName == $destRecordField && $fieldValue != "") $fieldValue = $recordToUse;
+                                                if ($fieldValue == "") {
+                                                    continue;
+                                                }
+                                                if ((in_array($fieldName, $fieldsToUse) || empty($fieldsToUse)) && in_array($fieldName, $destFields)) {
+                                                    if ($fieldName == $destRecordField && $fieldValue != "") {
+                                                        $fieldValue = $recordToUse;
+                                                    }
                                                     $fieldInstrument = $sourceMeta[$fieldName]['form_name'];
                                                     $instrumentRepeats = $sourceProject->isRepeatingForm($subEventID, $fieldInstrument);
-                                                    if (($instrument == $fieldInstrument && !$instrumentRepeats) || ($instrument != "" && $instrument != $fieldInstrument)) continue;
+                                                    if (($instrument == $fieldInstrument && !$instrumentRepeats) || ($instrument != "" && $instrument != $fieldInstrument)) {
+                                                        continue;
+                                                    }
                                                     $this->setDestinationData($destData, $sourceProject, $destProject, $fieldName, $fieldValue, $recordToUse, $destEventID, $instance);
                                                 }
                                             }
@@ -459,18 +471,23 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                                 }
                             }
                         }
-                    }
-	                elseif (isset($eventMapping[$eventID])) {
-	                    //TODO Need to check if a field is on a repeating/non-repeating basis when looking here for a valid field value, it will be empty ALWAYS otherwise
-	                    $destEventID = $eventMapping[$eventID];
+                    } elseif (isset($eventMapping[$eventID])) {
+                        //TODO Need to check if a field is on a repeating/non-repeating basis when looking here for a valid field value, it will be empty ALWAYS otherwise
+                        $destEventID = $eventMapping[$eventID];
 
-	                    foreach ($eventData as $fieldName => $fieldValue) {
-	                        if ((in_array($fieldName,$fieldsToUse) || empty($fieldsToUse)) && in_array($fieldName,$destFields)) {
-	                            if ($fieldValue == "") continue;
-                                if ($fieldName == $destRecordField && $fieldValue != "") $fieldValue = $recordToUse;
+                        foreach ($eventData as $fieldName => $fieldValue) {
+                            if ((in_array($fieldName, $fieldsToUse) || empty($fieldsToUse)) && in_array($fieldName, $destFields)) {
+                                if ($fieldValue == "") {
+                                    continue;
+                                }
+                                if ($fieldName == $destRecordField && $fieldValue != "") {
+                                    $fieldValue = $recordToUse;
+                                }
                                 $fieldInstrument = $sourceMeta[$fieldName]['form_name'];
                                 $instrumentRepeats = $sourceProject->isRepeatingForm($eventID, $fieldInstrument);
-                                if ($instrumentRepeats) continue;
+                                if ($instrumentRepeats) {
+                                    continue;
+                                }
                                 $this->setDestinationData($destData, $sourceProject, $destProject, $fieldName, $fieldValue, $recordToUse, $destEventID);
                             }
                         }
@@ -478,10 +495,10 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
                 }
             }
         }
-	    return $destData;
+        return $destData;
     }
 
-    function setDestinationData(&$destData, \Project $sourceProject, \Project $destProject, $srcFieldName, $srcFieldValue, $destRecord, $destEvent,$destRepeat = 1)
+    public function setDestinationData(&$destData, \Project $sourceProject, \Project $destProject, $srcFieldName, $srcFieldValue, $destRecord, $destEvent, $destRepeat = 1)
     {
         $destMeta = $destProject->metadata;
         $destEventForms = $destProject->eventsForms[$destEvent];
@@ -492,7 +509,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         $destInstrumentRepeats = $destProject->isRepeatingForm($destEvent, $destInstrument);
         $destEventRepeats = $destProject->isRepeatingEvent($destEvent);
 
-        if (in_array($destInstrument,$destEventForms) && $srcMeta[$srcFieldName]['element_type'] == $destMeta[$srcFieldName]['element_type'] && $this->matchEnum($srcMeta[$srcFieldName]['element_enum'],$destMeta[$srcFieldName]['element_enum'])) {
+        if (in_array($destInstrument, $destEventForms) && $srcMeta[$srcFieldName]['element_type'] == $destMeta[$srcFieldName]['element_type'] && $this->matchEnum($srcMeta[$srcFieldName]['element_enum'], $destMeta[$srcFieldName]['element_enum'])) {
             if ($destInstrumentRepeats) {
                 $destData[$destRecord][$destEvent][$destRecordField] = $destRecord;
                 //$destData[$destRecord][$destEvent]['redcap_repeat_instrument'] = "";
@@ -509,16 +526,17 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         }
     }
 
-    function matchEnum($srcEnum, $destEnum) {
-        $destEnum = str_replace(' \n','\n',$destEnum);
-        $destEnum = str_replace('\n ','\n',$destEnum);
-        $destEnum = str_replace(' ,',',',$destEnum);
-        $destEnum = str_replace(', ',',',$destEnum);
+    public function matchEnum($srcEnum, $destEnum)
+    {
+        $destEnum = str_replace(' \n', '\n', $destEnum);
+        $destEnum = str_replace('\n ', '\n', $destEnum);
+        $destEnum = str_replace(' ,', ',', $destEnum);
+        $destEnum = str_replace(', ', ',', $destEnum);
         $destEnum = rtrim($destEnum);
-        $srcEnum = str_replace(' \n','\n',$srcEnum);
-        $srcEnum = str_replace('\n ','\n',$srcEnum);
-        $srcEnum = str_replace(' ,',',',$srcEnum);
-        $srcEnum = str_replace(', ',',',$srcEnum);
+        $srcEnum = str_replace(' \n', '\n', $srcEnum);
+        $srcEnum = str_replace('\n ', '\n', $srcEnum);
+        $srcEnum = str_replace(' ,', ',', $srcEnum);
+        $srcEnum = str_replace(', ', ',', $srcEnum);
         $srcEnum = rtrim($srcEnum);
 
         if ($srcEnum == $destEnum) {
@@ -527,11 +545,13 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
         return false;
     }
 
-    function getDataTable($project_id){
-        return method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($project_id) : "redcap_data"; 
+    public function getDataTable($project_id)
+    {
+        return method_exists('\REDCap', 'getDataTable') ? \REDCap::getDataTable($project_id) : "redcap_data";
     }
 
-    function escape($arg){
+    public function escape($arg)
+    {
         return $this->framework->escape($arg);
     }
 }
