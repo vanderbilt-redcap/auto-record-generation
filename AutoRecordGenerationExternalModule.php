@@ -99,9 +99,9 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
             ## Need to set default value as $flagFieldName may not exist
             $triggerFieldValue = "";
             foreach ($results as $indexData) {
-                if ((!isset($indexData['redcap_event_name']) || $indexData['redcap_event_name'] == $eventName)
-                    && (!isset($indexData['redcap_repeat_instance']) || $indexData['redcap_repeat_instance'] == $repeat_instance)
-                    && $indexData[$flagFieldName] != "")
+                if ((!isset($indexData['redcap_event_name']) ||
+                $indexData['redcap_event_name'] == $eventName) && (!isset($indexData['redcap_repeat_instance']) ||
+                    $indexData['redcap_repeat_instance'] == $repeat_instance) && $indexData[$flagFieldName] != "")
                 {
                     $triggerFieldValue = $indexData[$flagFieldName];
                 }
