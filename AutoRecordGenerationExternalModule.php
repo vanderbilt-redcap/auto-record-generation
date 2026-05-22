@@ -289,7 +289,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 		return $returnFields;
 	}
 
-	public function processFieldEnum($enum) {
+	public function processFieldEnum($enum): array {
 		$enumArray = [];
 		$splitEnum = explode("\\n", $enum);
 		foreach ($splitEnum as $valuePair) {
