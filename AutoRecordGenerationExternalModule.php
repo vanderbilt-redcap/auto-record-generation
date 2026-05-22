@@ -101,7 +101,7 @@ class AutoRecordGenerationExternalModule extends AbstractExternalModule
 			foreach ($results as $indexData) {
 				if (
 					(!isset($indexData['redcap_event_name']) || $indexData['redcap_event_name'] == $eventName) &&
-					(!isset($indexData['redcap_repeat_instance']) || $indexData['redcap_repeat_instance'] == $repeat_instance) &&
+					(!isset($indexData['redcap_repeat_instance']) || ($indexData['redcap_repeat_instance'] ?: "1") == $repeat_instance) &&
 					$indexData[$flagFieldName] != ""
 				) {
 					$triggerFieldValue = $indexData[$flagFieldName];
