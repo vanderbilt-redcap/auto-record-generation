@@ -20,7 +20,7 @@ Feature: User can configure the module with two projects and verify that saving 
         And I check the checkbox labeled "1. Trigger save record save hook on target project" 
         And I select "Race" on the dropdown field labeled "1. Field to Trigger Record Generation"
 
-        And I select the radio option "No" for the field labeled "1. Overwrite data in destination project record every time data is saved in this project"
+        And I click on the radio labeled "No" in the row labeled "1. Overwrite data"
         And I click on the button labeled "Save"
         Then I should NOT see "Configure Module: EOC Audit Tool Dashboard"
 
@@ -75,8 +75,8 @@ Feature: User can configure the module with two projects and verify that saving 
         And I click on "Configure" in the row labeled "Auto Record Generation"
         Then I should see "Configure Module: Auto Record Generation"
         Then I should see "Project in Which to Generate New Record:"
-        And I select the radio option "Yes" for the field labeled "1. Overwrite data in destination project record every time data is saved in this project"
-        ## This is broken
+        And I click on the radio labeled "Yes" in the row labeled "1. Overwrite data"
+
         And I click on the button labeled "Save"
         Then I should NOT see "Configure Module: EOC Audit Tool Dashboard"
         
